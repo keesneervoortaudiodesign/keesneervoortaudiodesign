@@ -1,1417 +1,370 @@
 <title>Metrao3 Time-Sync Method</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
-  --paper:#FCFCFB;
-  --paper-2:#F3F4F2;
-  --paper-3:#E9EBE9;
-  --ink:#131A21;
-  --ink-2:#454F58;
-  --ink-3:#78848D;
-  --rule:#D7DBDC;
-  --rule-2:#B3BABE;
-  --deep:#12395F;
-
-  /* chart series - validated categorical slots 1-4 (light) */
-  --s1:#2a78d6;  /* cloud / internet NTP */
-  --s2:#eb6834;  /* LAN NTP  */
-  --s3:#1baf7a;  /* LAN PTP  */
-  --s4:#eda100;  /* GPS PPS  */
-
-  /* status - reserved, never used as a series */
-  --ok:#0B7A4B;
-  --warn:#9A5B00;
-  --bad:#A32017;
-
-  --u1:6px; --u2:12px; --u3:20px; --u4:32px; --u5:52px;
-  --serif:"Source Serif 4",Charter,"Bitstream Charter",Georgia,serif;
+  --paper:#FFFFFF;
+  --ground:#E7EAEC;
+  --tint:#F4F6F7;
+  --tint-2:#EBEFF1;
+  --ink:#0E1A24;
+  --ink-2:#485A67;
+  --ink-3:#8595A0;
+  --rule:#D5DCE0;
+  --rule-2:#B0BBC2;
+  --accent:#0B5C8A;
+  --good:#0E7A54;
+  --warn:#B4740B;
+  --bad:#A8342A;
   --sans:"Archivo","Helvetica Neue",Arial,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
-
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--paper);
-  color:var(--ink);
-  font-family:var(--serif);
-  font-size:16px;
-  line-height:1.55;
-  -webkit-font-smoothing:antialiased;
-}
-.sheet{max-width:1120px;margin:0 auto;padding:var(--u5) var(--u4) var(--u5)}
+html,body{margin:0}
+body{background:var(--ground);font-family:var(--sans);color:var(--ink);
+  -webkit-font-smoothing:antialiased}
 
-/* ---------- type ---------- */
-.eyebrow{
-  font-family:var(--mono);font-size:11px;font-weight:500;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+.stage{padding:24px 16px;display:flex;justify-content:center}
+.page{
+  width:182mm;height:269mm;background:var(--paper);flex:none;
+  transform-origin:top center;
+  box-shadow:0 1px 2px rgba(14,26,36,.10),0 10px 34px rgba(14,26,36,.13);
+  display:grid;grid-template-rows:auto auto auto auto auto auto;align-content:space-between;
+  padding:11mm 11mm 9mm;overflow:hidden;
 }
-h1{
-  font-family:var(--sans);font-weight:700;font-size:clamp(34px,5.1vw,56px);
-  line-height:1.02;letter-spacing:-.021em;margin:var(--u2) 0 0;
-  text-wrap:balance;max-width:20ch;color:var(--ink);
-}
-h1 .thin{font-weight:500;color:var(--ink-2)}
-h2{
-  font-family:var(--sans);font-weight:700;font-size:23px;letter-spacing:-.012em;
-  line-height:1.15;margin:0;text-wrap:balance;break-after:avoid;
-}
-h3{
-  font-family:var(--sans);font-weight:600;font-size:15px;letter-spacing:-.004em;
-  margin:0 0 var(--u1);break-after:avoid;
-}
-p{margin:0 0 var(--u2);max-width:66ch}
-p:last-child{margin-bottom:0}
-strong{font-weight:600}
-em{font-style:italic}
-a{color:var(--deep)}
-
-.lede{font-size:19px;line-height:1.5;color:var(--ink-2);max-width:60ch;margin-top:var(--u3)}
-.lede b{color:var(--ink);font-weight:600}
-.note{font-size:14px;line-height:1.5;color:var(--ink-2)}
-.mono{font-family:var(--mono)}
-.num{font-variant-numeric:tabular-nums}
 
 /* ---------- header ---------- */
-.masthead{border-bottom:2px solid var(--ink);padding-bottom:var(--u3)}
-.meta-strip{
-  display:flex;flex-wrap:wrap;gap:var(--u1) var(--u3);
-  margin-top:var(--u3);padding-top:var(--u2);border-top:1px solid var(--rule);
-  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.02em;
-}
-.meta-strip b{color:var(--ink-2);font-weight:500}
+.head{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:end;
+  border-bottom:2px solid var(--ink);padding-bottom:9px}
+.kicker{font-family:var(--mono);font-size:8.2px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+h1{font-size:26px;line-height:1.0;letter-spacing:-.024em;font-weight:700;margin:0}
+h1 span{display:block;color:var(--accent)}
+.thesis{font-size:11.2px;line-height:1.42;color:var(--ink-2);margin:0;padding-left:16px;
+  border-left:2px solid var(--accent)}
+.thesis b{color:var(--ink);font-weight:600}
 
-/* ---------- sections ---------- */
-.section{padding:var(--u5) 0 0}
-.section-head{
-  display:grid;grid-template-columns:64px minmax(0,1fr);gap:var(--u3);
-  align-items:baseline;border-top:1px solid var(--rule-2);padding-top:var(--u2);
-  margin-bottom:var(--u3);break-after:avoid;
-}
-.section-head .idx{
-  font-family:var(--mono);font-size:12px;font-weight:600;color:var(--deep);
-  letter-spacing:.06em;padding-top:4px;
-}
-.section-head .src{
-  font-family:var(--mono);font-size:11px;color:var(--ink-3);
-  letter-spacing:.04em;margin-top:var(--u1);
-}
-.body-cols{display:grid;grid-template-columns:64px minmax(0,1fr);gap:var(--u3)}
-.body-cols > .spacer{grid-column:1}
+/* ---------- kpi ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--rule)}
+.kpi{padding:9px 12px 10px;border-right:1px solid var(--rule)}
+.kpi:first-child{padding-left:0}
+.kpi:last-child{border-right:0}
+.kpi .v{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.02em;
+  color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}
+.kpi .k{font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin-top:6px;line-height:1.35}
 
-/* ---------- panels ---------- */
-.panel{
-  background:var(--paper-2);border:1px solid var(--rule);
-  padding:var(--u3);break-inside:avoid;
-}
-.panel.plain{background:transparent;border:0;padding:0}
-.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--u2)}
-.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--u2)}
-.stack{display:flex;flex-direction:column;gap:var(--u3);min-width:0}
-.stack-s{display:flex;flex-direction:column;gap:var(--u2);min-width:0}
+/* ---------- blocks ---------- */
+.block{padding-top:11px;min-height:0;display:flex;flex-direction:column}
+.block-head{display:flex;align-items:baseline;gap:9px;margin-bottom:6px}
+.block-head .n{font-family:var(--mono);font-size:8.2px;font-weight:600;color:var(--accent);
+  letter-spacing:.1em}
+.block-head h2{font-size:12.4px;font-weight:700;letter-spacing:-.012em;margin:0}
+.block-head .sub{font-family:var(--mono);font-size:8.4px;color:var(--ink-3);margin-left:auto;
+  text-align:right}
+svg{display:block;width:100%;height:auto}
 
-/* ---------- formula ---------- */
-.formulas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;
-  border:1px solid var(--rule);background:var(--paper)}
-.fx{padding:var(--u3);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.fx:nth-child(2n){border-right:0}
-.fx:nth-last-child(-n+2){border-bottom:0}
-.fx .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-3);margin-bottom:var(--u2)}
-.fx .eq{font-family:var(--mono);font-size:17px;font-weight:500;color:var(--deep);
-  letter-spacing:-.01em;line-height:1.4;overflow-x:auto}
-.fx .exp{font-size:14px;color:var(--ink-2);margin-top:var(--u2);line-height:1.45}
-
-/* ---------- key/value rows ---------- */
-.kv{display:grid;grid-template-columns:auto 1fr;gap:2px var(--u2);
-  font-family:var(--mono);font-size:12.5px}
-.kv dt{color:var(--ink-3)}
-.kv dd{margin:0;color:var(--ink);font-variant-numeric:tabular-nums}
-
-/* ---------- lane diagram ---------- */
-.lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--u2);align-items:stretch}
-.lane{border:1px solid var(--rule-2);background:var(--paper);display:flex;flex-direction:column;break-inside:avoid}
-.lane-top{padding:var(--u2) var(--u3);border-bottom:1px solid var(--rule);background:var(--paper-2)}
-.lane-top .who{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-3)}
-.lane-top .what{font-family:var(--sans);font-weight:600;font-size:17px;margin-top:3px;letter-spacing:-.01em}
-.lane-body{padding:var(--u3);flex:1;display:flex;flex-direction:column;gap:var(--u2)}
-.lane-body p{font-size:14px;line-height:1.45;margin:0}
-.tick{font-family:var(--mono);font-size:12px;color:var(--ink-2);
-  padding-left:16px;position:relative;line-height:1.5}
-.tick::before{content:"";position:absolute;left:0;top:8px;width:8px;height:1px;background:var(--rule-2)}
-.lane-foot{padding:var(--u2) var(--u3);border-top:1px solid var(--rule);
-  font-family:var(--mono);font-size:12px;display:flex;justify-content:space-between;gap:var(--u2);
-  font-variant-numeric:tabular-nums}
-.lane-foot .k{color:var(--ink-3)}
-.lane-foot .v{color:var(--ink);font-weight:500}
-
-.rail{margin:var(--u2) 0 0;border:1px solid var(--rule-2);background:var(--paper);
-  padding:var(--u3);break-inside:avoid}
-.rail-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-3);margin-bottom:var(--u2)}
-.ladder{display:flex;flex-wrap:wrap;align-items:center;gap:var(--u1);
-  font-family:var(--mono);font-size:13px;color:var(--ink)}
-.rung{border:1px solid var(--rule-2);background:var(--paper-2);padding:4px 10px;white-space:nowrap}
-.rung.off{color:var(--ink-3);border-style:dashed}
-.arrow{color:var(--ink-3);padding:0 2px}
-
-/* ---------- chart ---------- */
-.figure{border:1px solid var(--rule-2);background:var(--paper);break-inside:avoid;min-width:0}
-.figure-head{padding:var(--u3) var(--u3) var(--u2);border-bottom:1px solid var(--rule)}
-.figure-head h3{margin-bottom:4px}
-.figure-head .sub{font-size:14px;color:var(--ink-2);margin:0;max-width:70ch}
-.chart-wrap{position:relative;padding:var(--u3);overflow-x:auto}
-#nomogram{display:block;width:100%;min-width:640px;height:auto}
-.legend{display:flex;flex-wrap:wrap;gap:var(--u1) var(--u3);
-  padding:0 var(--u3) var(--u3);font-family:var(--mono);font-size:12px}
-.legend button{
-  display:flex;align-items:center;gap:8px;background:none;border:0;padding:2px 0;
-  font:inherit;color:var(--ink-2);cursor:pointer;border-bottom:1px solid transparent;
-}
-.legend button:hover,.legend button:focus-visible{color:var(--ink);border-bottom-color:var(--rule-2)}
-.legend .swatch{width:22px;height:3px;flex:none;border-radius:2px}
-#readout{
-  position:absolute;pointer-events:none;opacity:0;
-  background:var(--ink);color:var(--paper);padding:8px 10px;
-  font-family:var(--mono);font-size:11.5px;line-height:1.6;
-  font-variant-numeric:tabular-nums;white-space:nowrap;z-index:5;
-}
-#readout .hdr{color:#A9B6C0;border-bottom:1px solid #37424C;padding-bottom:4px;margin-bottom:4px}
-#readout .row{display:flex;justify-content:space-between;gap:14px}
-#readout .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
-
-/* ---------- table ---------- */
-.table-wrap{overflow-x:auto;border:1px solid var(--rule-2);background:var(--paper)}
-table{border-collapse:collapse;width:100%;min-width:860px;font-size:13.5px;table-layout:auto}
-th:first-child,td:first-child{min-width:152px}
-caption{text-align:left;padding:var(--u3) var(--u3) var(--u2);font-size:14px;
-  color:var(--ink-2);border-bottom:1px solid var(--rule)}
-th,td{text-align:left;padding:10px var(--u2);border-bottom:1px solid var(--rule);vertical-align:top}
-th{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink-3);font-weight:500;background:var(--paper-2);white-space:nowrap}
-tbody tr:last-child td{border-bottom:0}
-td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12.5px}
-td.n.wrap{white-space:normal}
-td .path{display:flex;align-items:center;gap:9px;font-weight:600}
-td .chip{width:12px;height:12px;flex:none;border-radius:3px}
-tr.hl{background:#EEF4FC}
-tr.answer td{background:#F0F6F2}
-tr.answer td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
-
-.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
-  font-size:11px;letter-spacing:.03em;padding:3px 8px;border:1px solid currentColor;
-  white-space:nowrap}
-.pill.ok{color:var(--ok)}
-.pill.warn{color:var(--warn)}
-.pill.bad{color:var(--bad)}
-.pill .g{font-size:12px;line-height:1}
-
-/* ---------- steps ---------- */
-.steps{list-style:none;margin:0;padding:0;counter-reset:s;
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;
-  border:1px solid var(--rule-2);background:var(--paper)}
-.steps li{counter-increment:s;padding:var(--u2) var(--u3);display:grid;
-  grid-template-columns:26px 1fr;gap:var(--u2);
-  border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);break-inside:avoid}
-.steps li:nth-child(2n){border-right:0}
-.steps li:nth-last-child(-n+2){border-bottom:0}
-.steps li::before{
-  content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:11px;
-  color:var(--deep);font-weight:600;padding-top:3px;
-}
-.steps .t{font-family:var(--sans);font-weight:600;font-size:14px;letter-spacing:-.005em}
-.steps .d{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);
-  margin-top:2px;line-height:1.5;font-variant-numeric:tabular-nums}
-.steps li.phase{background:#F0F6F2}
-.steps li.phase .t{color:var(--ok)}
+/* ---------- chain ---------- */
+.chain{display:grid;grid-template-columns:1fr 14px 1fr 14px 1fr;align-items:stretch;gap:0}
+.step{border:1px solid var(--rule-2);background:var(--tint);padding:8px 10px 9px}
+.step .t{font-size:10px;font-weight:700;letter-spacing:-.005em;margin-bottom:4px}
+.step .d{font-family:var(--mono);font-size:8.2px;line-height:1.5;color:var(--ink-2)}
+.step.key{background:#EAF4EF;border-color:#9CC9B6}
+.step.key .t{color:var(--good)}
+.arrow{display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:13px;color:var(--rule-2)}
 
 /* ---------- verdict ---------- */
-.verdict{
-  border:2px solid var(--ink);background:var(--paper);margin-top:var(--u5);break-inside:avoid;
-}
-.verdict-head{padding:var(--u3) var(--u4);border-bottom:1px solid var(--rule)}
-.verdict-head .eyebrow{color:var(--deep)}
-.verdict-head p{
-  font-family:var(--sans);font-weight:600;font-size:clamp(20px,2.6vw,28px);
-  line-height:1.24;letter-spacing:-.015em;margin:var(--u2) 0 0;max-width:34ch;color:var(--ink);
-}
-.routes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-.route{padding:var(--u3) var(--u4);border-right:1px solid var(--rule)}
-.route:last-child{border-right:0}
-.route .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-3)}
-.route h3{margin:var(--u1) 0 var(--u2);font-size:17px}
-.route p{font-size:14.5px;line-height:1.5}
-.route .out{margin-top:var(--u2);padding-top:var(--u2);border-top:1px solid var(--rule);
-  font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-.route .out b{color:var(--ok);font-weight:600}
+.verdict{margin-top:11px;background:var(--ink);color:#fff;padding:11px 14px;
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+.verdict .t{font-size:13px;font-weight:700;line-height:1.24;letter-spacing:-.012em}
+.verdict .t em{font-style:normal;color:#63D3A4}
+.verdict .s{font-family:var(--mono);font-size:8.4px;line-height:1.55;color:#A9BAC6;
+  max-width:210px;border-left:1px solid #33454F;padding-left:12px}
 
-/* ---------- honesty ---------- */
-.honest{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  border:1px solid var(--rule-2);background:var(--paper)}
-.honest > div{padding:var(--u3);border-right:1px solid var(--rule);break-inside:avoid}
-.honest > div:last-child{border-right:0}
-.honest code{font-family:var(--mono);font-size:12px;background:var(--paper-3);
-  padding:1px 5px;color:var(--deep);white-space:nowrap}
-.honest p{font-size:13.5px;line-height:1.5;margin-top:var(--u2);color:var(--ink-2)}
+/* ---------- foot ---------- */
+.foot{display:flex;justify-content:space-between;gap:12px;margin-top:8px;
+  font-family:var(--mono);font-size:7.4px;color:var(--ink-3);letter-spacing:.02em}
+.foot .st{color:var(--warn)}
 
-/* ---------- footer ---------- */
-footer{margin-top:var(--u5);padding-top:var(--u3);border-top:2px solid var(--ink)}
-.status{border-left:3px solid var(--warn);padding:var(--u2) 0 var(--u2) var(--u3);
-  background:var(--paper-2);margin-bottom:var(--u3)}
-.status .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--warn);margin-bottom:var(--u1)}
-.status p{font-size:13.5px;color:var(--ink-2);margin:0;max-width:none}
-.refs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--u1) var(--u4);
-  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);line-height:1.6}
-.refs b{color:var(--ink-2);font-weight:500}
-.colophon{margin-top:var(--u3);font-family:var(--mono);font-size:11px;color:var(--ink-3);
-  display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--u2)}
-
-:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
-
-/* ---------- responsive ---------- */
-@media (max-width:860px){
-  .sheet{padding:var(--u4) var(--u3)}
-  .section-head,.body-cols{grid-template-columns:1fr;gap:var(--u2)}
-  .section-head .idx{padding-top:0}
-  .lanes,.grid-3,.honest,.routes,.grid-2,.steps,.formulas,.refs{grid-template-columns:1fr}
-  .honest > div,.route{border-right:0;border-bottom:1px solid var(--rule)}
-  .honest > div:last-child,.route:last-child{border-bottom:0}
-  .steps li{border-right:0}
-  .fx{border-right:0}
-}
-
-/* ---------- print ---------- */
-@page{size:A4 portrait;margin:14mm}
 @media print{
+  @page{size:A4 portrait;margin:14mm}
   html,body{background:#fff}
-  :root{--u1:4px;--u2:8px;--u3:11px;--u4:16px;--u5:20px}
-  body{font-size:9.6pt;line-height:1.4}
-  .sheet{max-width:none;padding:0}
-  h1{font-size:21pt}
-  h2{font-size:12.6pt}
-  h3{font-size:10.4pt}
-  .lede{font-size:10.8pt;margin-top:9pt}
-  .section{padding-top:10pt}
-  p,li,td,th{orphans:2;widows:2}
-  .section-head{margin-bottom:9pt}
-  .masthead{padding-bottom:11pt}
-  .meta-strip{margin-top:10pt;padding-top:7pt}
-  .figure-head{padding:11pt 11pt 7pt}
-  .chart-wrap{padding:9pt}
-  .legend{padding:0 11pt 9pt}
-  .lane-body,.lane-top,.lane-foot,.rail,.panel,.honest>div,.route{padding:10pt 12pt}
-  .steps li{padding:6pt 11pt}
-  .verdict-head{padding:12pt 14pt}
-  caption{padding:10pt 11pt 7pt}
-  th,td{padding:5pt 8pt}
-  footer{margin-top:20pt;padding-top:11pt}
-  .verdict{margin-top:20pt}
-  p{margin-bottom:7pt}
-  #readout{display:none!important}
-  .legend button{cursor:default}
-  /* keep the atoms whole; let the containers flow across pages */
-  .panel,.lane,.table-wrap,.honest,.rail,.chart-wrap,.figure-head,
-  .verdict-head,.route,.steps li,.fx{break-inside:avoid}
-  .figure,.verdict,.lanes,.grid-3,.grid-2,.steps,.formulas,.honest{break-inside:auto}
-  .figure-head,.verdict-head{break-after:avoid}
-  .section{break-inside:auto}
-  .verdict{break-before:auto}
-  #nomogram{min-width:0}
-  .chart-wrap,.table-wrap{overflow:visible}
-  table{min-width:0;font-size:8.4pt}
-  th:first-child,td:first-child{min-width:0}
-  td.n,th{white-space:normal}
-  .pill{font-size:8pt;padding:2px 5px}
-  .table-wrap{overflow-x:hidden}
-  /* the mechanism column is already spelled out in §03; drop it so the table fits the page */
-  table th:nth-child(2),table td:nth-child(2){display:none}
-  .pill{white-space:normal}
+  .stage{padding:0;display:block}
+  .page{width:auto;height:auto;min-height:0;box-shadow:none;padding:0;transform:none!important;
+    break-inside:avoid}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<div class="sheet">
+<div class="stage"><div class="page">
 
-  <header class="masthead">
-    <div class="eyebrow">Metrao3 &middot; Measurement methodology &middot; Sheet TS-01</div>
-    <h1>Time Sync for<br>Phase-Accurate<br><span class="thin">Transfer Curves</span></h1>
-    <p class="lede">
-      A transfer curve is only an impulse response if it carries <b>phase</b>. Phase is time &mdash; and in
-      Metrao3 the microphones sit on <b>n independent nodes</b>, connected by whatever link each one
-      happens to have: cloud, UMTS, LAN or Wi-Fi. The link carries the data. The <b>time</b> comes from
-      somewhere else entirely: a <b>GPS PPS clock</b> at each node, and <b>PTP</b> across the LAN segment.
-      This sheet shows what that timing plane actually delivers, and why the result is phase-accurate
-      across the full audio band.
-    </p>
-    <div class="meta-strip">
-      <span><b>Capture</b> 48 kHz mono I&sup2;S</span>
-      <span><b>FFT</b> 16 384 pt &middot; 2.93 Hz &middot; 341 ms</span>
-      <span><b>Overlap</b> 75% &middot; ~12 frames/s</span>
-      <span><b>Output</b> 131 pt, 1/12 oct, 16 Hz&ndash;20 kHz</span>
-      <span><b>Rate</b> 1 result/s</span>
+  <header class="head">
+    <div>
+      <div class="kicker">Metrao3 &middot; distributed acoustic measurement</div>
+      <h1>Time Sync<span>for Phase-Accurate Measurement</span></h1>
     </div>
+    <p class="thesis">
+      A transfer curve becomes an <b>impulse response</b> only if it carries phase &mdash; and phase is
+      time. Metrao3 keeps time on its own plane: a <b>GPS PPS</b> clock at the node and <b>PTP</b>
+      across the LAN. The link a node happens to use never touches the phase.
+    </p>
   </header>
 
-  <!-- ============ 01 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">01</div>
-      <div>
-        <h2>Phase is a time measurement, so a clock error is a phase error</h2>
-        <div class="src">architecture.md &sect;6.3.5&ndash;6.3.6 &middot; &sect;6.3.8</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          Each receiver computes the transfer function against the reference by cross-spectral
-          averaging, then inverse-transforms it. The impulse response <em>is</em> the transfer function.
-          Discard phase and you do not get a worse impulse response &mdash; you get none at all.
-        </p>
-
-        <div class="formulas">
-          <div class="fx">
-            <div class="lbl">Transfer function &mdash; Welch cross-spectral</div>
-            <div class="eq">H(f) = &Sigma;G<sub>xy</sub> / &Sigma;G<sub>xx</sub></div>
-            <div class="exp">Complex. Accumulated over ~12 overlapping Hann frames per second.
-              Bins more than 60 dB below the strongest are floored to zero.</div>
-          </div>
-          <div class="fx">
-            <div class="lbl">Impulse response</div>
-            <div class="eq">h(t) = IFFT&#123; H(f) &#125;</div>
-            <div class="exp">Requires the complex <em>H</em>. Magnitude-only data inverts to nothing
-              physical &mdash; no arrival time, no reflections, no gate.</div>
-          </div>
-          <div class="fx">
-            <div class="lbl">What a timing error costs</div>
-            <div class="eq">&Delta;&phi; = 360&deg; &middot; f &middot; &Delta;t</div>
-            <div class="exp">Linear in frequency. 1 ms of clock error is 0.36&deg; at 1 Hz and
-              3600&deg; at 10 kHz &mdash; ten full cycles of ambiguity.</div>
-          </div>
-          <div class="fx">
-            <div class="lbl">Coherence &mdash; the built-in referee</div>
-            <div class="eq">&gamma;&sup2;(f) = |&Sigma;G<sub>xy</sub>|&sup2; / (&Sigma;G<sub>xx</sub>&middot;&Sigma;G<sub>yy</sub>)</div>
-            <div class="exp">An alignment that wanders between frames rotates the averaged
-              cross-spectrum toward zero. Bad timing shows up here first.</div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>Two distinct failure modes &mdash; only one of them is a clock problem</h3>
-          <div class="grid-2" style="margin-top:12px">
-            <div>
-              <div class="eyebrow" style="color:var(--bad)">Ambiguity</div>
-              <p class="note" style="margin-top:6px">Once the clock error passes half a period, the
-                propagation delay you are trying to measure is indistinguishable from the clock
-                offset. At 10 kHz a 1 ms error is 10 whole cycles &mdash; the phase reading is a number,
-                but it means nothing.</p>
-            </div>
-            <div>
-              <div class="eyebrow" style="color:var(--warn)">Decorrelation</div>
-              <p class="note" style="margin-top:6px">If the offset <em>drifts</em> across the twelve frames
-                being averaged, each frame&rsquo;s cross-spectrum vector points somewhere different and the
-                sum partially cancels. Magnitude sags, coherence drops, and the result correctly
-                reports itself as untrustworthy.</p>
-            </div>
-          </div>
-          <p class="note" style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px">
-            <strong>A static offset is not a failure mode.</strong> A constant delay is exactly the quantity
-            the measurement exists to find: it is recovered by delay detection (&sect;6.3.7), removed by
-            circular-shifting the impulse response, and compensated in the spectrum by
-            <span class="mono">phase[i] += (2&pi; &middot; margin / N) &middot; i</span>. What must be controlled is not
-            <em>how large</em> the offset is, but whether it is <em>known and stable</em>.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 02 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">02</div>
-      <div>
-        <h2>Any number of nodes, on any mix of links &mdash; because the link never carries the time</h2>
-        <div class="src">architecture.md &sect;3&ndash;&sect;4 &middot; ADR-017 &middot; ADR-001 (MQTT over WSS)</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          A session is one reference node plus <strong>n measurement nodes</strong>. Each node reaches the
-          broker over whichever link it has &mdash; wired LAN, Wi-Fi, UMTS/LTE, or straight to the cloud &mdash;
-          on one MQTT connection over WSS port 443, with CBOR payloads. Nodes do not have to agree on a
-          transport, and adding the <em>n</em>th node does not tighten any requirement on the others.
-        </p>
-        <p>
-          That is only possible because Metrao3 runs <strong>two separate planes</strong>. The
-          <strong>transport plane</strong> moves audio, results and settings, and is allowed to be slow,
-          jittery and heterogeneous. The <strong>timing plane</strong> is what the phase actually rides on,
-          and it does not touch the transport at all: a <strong>GPS PPS</strong> pulse into each
-          GNSS-equipped node, and <strong>PTP</strong> from a GPS-disciplined master to the nodes sharing
-          its LAN segment.
-        </p>
-
-        <div class="figure">
-          <div class="figure-head">
-            <h3>One session, n nodes, two planes</h3>
-            <p class="sub">Above the nodes: where the time comes from. Below: where the data goes. A node&rsquo;s
-              position in one plane says nothing about its position in the other &mdash; a node on UMTS can be
-              the best-timed node in the session.</p>
-          </div>
-          <div class="chart-wrap">
-            <svg id="topology" viewBox="0 0 900 470" role="img"
-              aria-label="Two-plane topology diagram. Above a row of six nodes, a timing plane: a GNSS constellation bar delivers a 1PPS pulse on GPIO 17 to the reference node and to nodes 01 and 02, at plus or minus 1 to 5 microseconds; a PTP domain rail runs from the reference node, acting as Statime PTP master, to nodes 03 and 04 on the same wired LAN segment at about 50 microseconds; node n has coarse NTP only. Below the nodes, a transport plane: each node's link, wired LAN, UMTS, or Wi-Fi, drops onto a shared rail into one MQTT broker over WSS port 443, which also serves coarse NTP, retained settings and orchestration."></svg>
-          </div>
-        </div>
-
-        <div class="grid-3">
-          <div class="panel">
-            <h3>n scales, the budget does not</h3>
-            <p class="note">Every node is disciplined to the same absolute reference &mdash; UTC via GNSS, or a
-              GPS-disciplined PTP master. Error is node-to-UTC, so it <strong>never accumulates</strong> along a
-              chain of nodes. Ten nodes are no harder to align than two.</p>
-          </div>
-          <div class="panel">
-            <h3>Link quality &ne; time quality</h3>
-            <p class="note">A UMTS node with a GNSS fix is eligible for a phase measurement; a wired node
-              without one may not be. All links terminate on the same broker and the same CBOR contract.</p>
-          </div>
-          <div class="panel">
-            <h3>Eligibility, per node, per session</h3>
-            <p class="note">Each node advertises what it actually has.
-              <span class="mono">metrao3-cloud-api</span> matches that against the use case&rsquo;s threshold, so
-              an <em>n</em>-node session can run mixed &mdash; loosely-timed nodes contributing magnitude and
-              spatial context only.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 03 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">03</div>
-      <div>
-        <h2>The timing plane: a GPS PPS clock at the node, PTP across the segment</h2>
-        <div class="src">ADR-017 (supersedes ADR-004) &middot; ADR-037 &middot; architecture.md &sect;5</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          Fine time comes from two mechanisms and only two: <strong>GPS PPS</strong>, which disciplines a
-          node directly to UTC and needs no network at all, and <strong>PTP</strong>, which distributes a
-          GPS-disciplined node&rsquo;s time across its LAN segment. Underneath them sits coarse NTP, which
-          every node always has and which is never asked to carry phase. Timing requirements belong to
-          the <strong>use case</strong>, not to the node.
-        </p>
-
-        <div class="lanes">
-          <div class="lane">
-            <div class="lane-top" style="box-shadow:inset 0 3px 0 var(--s4)">
-              <div class="who">Fine time &middot; absolute UTC &middot; per node</div>
-              <div class="what">GPS PPS clock</div>
-            </div>
-            <div class="lane-body">
-              <p>A discrete <strong>Quectel LC76G</strong> GNSS receiver on the cellular + GNSS daughter
-                board. Its <span class="mono">1PPS</span> pin is hard-wired to <span class="mono">GPIO 17</span> &mdash;
-                not multiplexed through UART or USB.</p>
-              <div class="tick">NMEA over I&sup2;C names the second; the pulse marks its exact edge.</div>
-              <div class="tick">Needs no LAN and no peers &mdash; which is what makes UMTS nodes first-class.</div>
-              <div class="tick">The PPS comes from the GNSS receiver, never from the modem: no mainstream
-                cellular module has a timepulse pin (ADR-037).</div>
-              <div class="tick"><strong>Carries phase across the whole audio band.</strong></div>
-            </div>
-            <div class="lane-foot"><span class="k">Accuracy</span><span class="v">&plusmn;1&ndash;5 &micro;s</span></div>
-          </div>
-
-          <div class="lane">
-            <div class="lane-top" style="box-shadow:inset 0 3px 0 var(--s3)">
-              <div class="who">Fine time &middot; local segment</div>
-              <div class="what">PTP (Statime)</div>
-            </div>
-            <div class="lane-body">
-              <p>A GPS-equipped Metrao3 node becomes the <strong>PTP master</strong> for its segment and the
-                other LAN nodes slave to it. Pure-Rust <strong>Statime</strong> &mdash; no grandmaster appliance
-                enters the BOM.</p>
-              <div class="tick">Extends one GNSS fix to every wired node behind it &mdash; one antenna
-                install covers the segment.</div>
-              <div class="tick">Disciplines a <em>virtual</em> clock
-                (<span class="mono">virtual-system-clock = true</span>) so PTP and NTP never fight over
-                <span class="mono">CLOCK_REALTIME</span>.</div>
-              <div class="tick">Software-timestamped on a Pi Zero 2 W &mdash; no PHC on the onboard MAC, so
-                ~50 &micro;s is the floor.</div>
-              <div class="tick"><strong>Carries phase to about 2.5 kHz.</strong></div>
-            </div>
-            <div class="lane-foot"><span class="k">Accuracy</span><span class="v">~50 &micro;s</span></div>
-          </div>
-
-          <div class="lane">
-            <div class="lane-top" style="box-shadow:inset 0 3px 0 var(--s1)">
-              <div class="who">Coarse time &middot; every node, always</div>
-              <div class="what">Cloud / LAN NTP</div>
-            </div>
-            <div class="lane-body">
-              <p>Chrony against the Metrao3 NTP server with public-pool fallback, or against the reference
-                node acting as LAN master. Rides the same WSS/443 path as the data.</p>
-              <div class="tick">Job: session windowing &mdash; which one-second blocks belong to the same
-                measurement event. ~10 ms is enough.</div>
-              <div class="tick">Job: SPL and Leq integration, fleet logging, orchestration.</div>
-              <div class="tick">LAN master &plusmn;0.1&ndash;1 ms &middot; internet &plusmn;1&ndash;20 ms &middot;
-                UMTS without a fix &plusmn;5&ndash;50 ms.</div>
-              <div class="tick"><strong>Never asked to carry phase.</strong></div>
-            </div>
-            <div class="lane-foot"><span class="k">Accuracy</span><span class="v">&plusmn;0.1&ndash;50 ms</span></div>
-          </div>
-        </div>
-
-        <div class="rail">
-          <div class="rail-title">On the device: one chrony ladder, one owner of the clock chip</div>
-          <div class="ladder">
-            <span class="rung off">GPS / PPS</span><span class="arrow">&rarr;</span>
-            <span class="rung">NTP</span><span class="arrow">&rarr;</span>
-            <span class="rung">DS3231 RTC &plusmn;2 ppm</span>
-            <span class="arrow" style="padding:0 8px">&rArr;</span>
-            <span class="rung" style="background:var(--paper);border-color:var(--deep);color:var(--deep)">CLOCK_REALTIME</span>
-          </div>
-          <p class="note" style="margin-top:14px">
-            Timestamps come from <span class="mono">CLOCK_REALTIME</span> with no offline special-casing.
-            <span class="mono">hwclock</span>&rsquo;s own RTC sync is masked so <span class="mono">chronyd</span> is the sole
-            writer to the chip. Chrony is configured to <strong>slew, never step</strong>, so a correction after an
-            offline stretch can never delete or duplicate Leq data. The active source is published as
-            the frozen enum <span class="mono">clock_source: ntp | rtc | gps</span> alongside
-            <span class="mono">clock_offset_us</span> &mdash; an unrecognised refid yields nothing rather than a
-            fabricated value.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 04 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">04</div>
-      <div>
-        <h2>What each path buys you, in degrees</h2>
-        <div class="src">&Delta;&phi; = 360&deg; &middot; f &middot; &Delta;t &middot; architecture.md &sect;5.3, &sect;6.3.10</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-
-        <div class="figure">
-          <div class="figure-head">
-            <h3>Phase error against frequency, by timing path</h3>
-            <p class="sub">Log&ndash;log, so every timing tier is a straight line. Read up from a frequency to
-              find the phase error that tier leaves behind. Below 5&deg; the phase is measurement-grade;
-              above 180&deg; the reading is ambiguous by at least half a cycle.</p>
-          </div>
-          <div class="chart-wrap">
-            <svg id="nomogram" viewBox="0 0 900 520" role="img"
-              aria-label="Log-log chart of phase error in degrees against frequency from 20 Hz to 20 kHz. Cloud NTP at 10 ms exceeds 180 degrees above 50 Hz. LAN NTP at 1 ms exceeds 180 degrees above 500 Hz. LAN PTP at 50 microseconds stays under 45 degrees to 2.5 kHz and reaches 360 degrees at 20 kHz. GPS PPS at 5 microseconds stays under 45 degrees across the whole audio band, reaching 36 degrees at 20 kHz. A dashed rule marks one sample at 48 kHz, 20.8 microseconds."></svg>
-            <div id="readout" aria-hidden="true"></div>
-          </div>
-          <div class="legend" id="legend"></div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <caption>Phase-accurate bandwidth per timing path. &ldquo;Good to&rdquo; is the frequency at which
-              the residual timing error reaches 45&deg; &mdash; the point where phase stops being trustworthy
-              for tuning decisions.</caption>
-            <thead>
-              <tr>
-                <th scope="col">Timing path</th>
-                <th scope="col">Mechanism</th>
-                <th scope="col">Residual &Delta;t</th>
-                <th scope="col">&phi; at 1 kHz</th>
-                <th scope="col">&phi; at 10 kHz</th>
-                <th scope="col">Phase good to</th>
-                <th scope="col">Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr data-series="s1">
-                <td><span class="path"><span class="chip" style="background:var(--s1)"></span>Cloud / internet NTP</span></td>
-                <td class="n wrap">chrony &middot; pool + M3</td>
-                <td class="n">&plusmn;1&ndash;20 ms</td>
-                <td class="n">3600&deg;+</td>
-                <td class="n">&mdash;</td>
-                <td class="n">~12 Hz</td>
-                <td><span class="pill bad"><span class="g">&#9679;</span>Windowing only</span></td>
-              </tr>
-              <tr>
-                <td><span class="path"><span class="chip" style="background:var(--paper-3);border:1px solid var(--rule-2)"></span>Cellular NTP, no fix</span></td>
-                <td class="n wrap">chrony over LTE</td>
-                <td class="n">&plusmn;5&ndash;50 ms</td>
-                <td class="n">&mdash;</td>
-                <td class="n">&mdash;</td>
-                <td class="n">~2.5 Hz</td>
-                <td><span class="pill bad"><span class="g">&#9679;</span>Rough gating</span></td>
-              </tr>
-              <tr data-series="s2">
-                <td><span class="path"><span class="chip" style="background:var(--s2)"></span>LAN NTP (Chrony)</span></td>
-                <td class="n wrap">chrony &middot; LAN master</td>
-                <td class="n">&plusmn;0.1&ndash;1 ms</td>
-                <td class="n">36&ndash;360&deg;</td>
-                <td class="n">360&ndash;3600&deg;</td>
-                <td class="n">125 Hz &ndash; 1.25 kHz</td>
-                <td><span class="pill warn"><span class="g">&#9679;</span>Magnitude + LF phase</span></td>
-              </tr>
-              <tr data-series="s3">
-                <td><span class="path"><span class="chip" style="background:var(--s3)"></span>LAN PTP (Statime)</span></td>
-                <td class="n wrap">statime &middot; GPS master</td>
-                <td class="n">~50 &micro;s</td>
-                <td class="n">18&deg;</td>
-                <td class="n">180&deg;</td>
-                <td class="n">2.5 kHz</td>
-                <td><span class="pill warn"><span class="g">&#9679;</span>Phase to ~2.5 kHz</span></td>
-              </tr>
-              <tr data-series="s4">
-                <td><span class="path"><span class="chip" style="background:var(--s4)"></span>GPS PPS</span></td>
-                <td class="n wrap">LC76G 1PPS &rarr; GPIO 17</td>
-                <td class="n">&plusmn;1&ndash;5 &micro;s</td>
-                <td class="n">0.4&ndash;1.8&deg;</td>
-                <td class="n">3.6&ndash;18&deg;</td>
-                <td class="n">25&ndash;125 kHz</td>
-                <td><span class="pill ok"><span class="g">&#9679;</span>Full-band phase</span></td>
-              </tr>
-              <tr class="answer">
-                <td><span class="path"><span class="chip" style="background:var(--ok)"></span>Reference correlation</span></td>
-                <td class="n wrap">correlation, post-processing</td>
-                <td class="n">&le;1 sample, re-locked 1&times;/s</td>
-                <td class="n">removed by measurement</td>
-                <td class="n">removed by measurement</td>
-                <td class="n">whole band</td>
-                <td><span class="pill ok"><span class="g">&#9679;</span>Full band, any path</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p class="note">
-          One sample at 48 kHz is <span class="mono">20.8 &micro;s</span> &mdash; 150&deg; at 20 kHz, exactly 180&deg;
-          at Nyquist. The &plusmn;1&ndash;5 &micro;s GPS figure is the Raspberry Pi <span class="mono">pps-gpio</span>
-          interrupt-latency floor, not a receiver spec: the LC76G&rsquo;s own timepulse is two to three orders
-          of magnitude better, which is why a timing-grade GNSS receiver would buy nothing here.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 05 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">05</div>
-      <div>
-        <h2>The decisive move: the reference signal carries the time, not the clock</h2>
-        <div class="src">ADR-017 &sect;3 (primary path) &middot; &sect;4 (fallback) &middot; architecture.md &sect;6.3.7, &sect;6.3.10</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          The transfer-curve protocol requires a <strong>known reference signal present in the captured
-          data</strong>. Every measurement receiver decodes the reference stream, restores its amplitude and
-          cross-correlates it against its own microphone capture; the exact start sample falls out of the
-          correlation. <strong>Timing comes from the signal itself</strong> &mdash; which is how impulse-response
-          measurement has always worked, and the only method that reaches genuinely sample-accurate
-          alignment. It also inverts the requirement on the clocks: they need only be good enough to
-          pick the right second.
-        </p>
-
-        <div class="figure">
-          <div class="figure-head">
-            <h3>Coarse from the clock, fine from the signal, residual from the impulse response</h3>
-            <p class="sub">Three nested alignment stages. Each one is three to four orders of magnitude
-              tighter than the one above it, and each is measured rather than assumed.</p>
-          </div>
-          <div class="chart-wrap">
-            <svg id="align" viewBox="0 0 900 434" role="img"
-              aria-label="Diagram of three nested alignment stages. Stage one: the wall clock selects a one-second window with about 10 milliseconds of slack. Stage two: cross-correlation of the decoded reference against the local capture locks alignment to one sample, 20.8 microseconds. Stage three: peak detection in the impulse response resolves the residual propagation delay to sub-sample precision, and the impulse response is circular-shifted with a matching phase correction."></svg>
-          </div>
-        </div>
-
-        <div class="grid-3">
-          <div class="panel">
-            <h3>Delay detection is quality-gated</h3>
-            <dl class="kv" style="margin-top:12px">
-              <dt>Search</dt><dd>8 160 samples &middot; 170 ms &middot; ~58 m</dd>
-              <dt>&ge; 15 dB</dt><dd>accept unconditionally</dd>
-              <dt>6&ndash;15 dB</dt><dd>accept if within 15% of last</dd>
-              <dt>&lt; 6 dB</dt><dd>reject &mdash; no arrival found</dd>
-              <dt>Lock</dt><dd>3 consecutive agreeing detections</dd>
-            </dl>
-            <p class="note" style="margin-top:12px">Prominence is the peak measured against the
-              impulse-response noise floor, excluding &plusmn;5 samples around it. A transient spike
-              cannot steal the lock.</p>
-          </div>
-          <div class="panel">
-            <h3>Drift is absorbed, not fought</h3>
-            <p class="note">Crystal tolerance puts each node&rsquo;s I&sup2;S sample rate a few ppm off 48 000 Hz.
-              Over one accumulation window that is sub-sample, and the delay detector simply
-              re-measures it every second. Over longer runs the sliding average tracks it. No explicit
-              sample-rate correction exists, because none is needed.</p>
-          </div>
-          <div class="panel">
-            <h3>When there is no reference signal</h3>
-            <p class="note">Some deployments cannot inject or capture one. Then a GPS-equipped Metrao3
-              node becomes the LAN PTP master and the others slave to it at ~50 &micro;s &mdash; phase-accurate
-              to about 2.5 kHz. This is the <em>only</em> retained role of Statime in the stack, and the
-              sole reason PTP survives ADR-017 at all.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 06 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">06</div>
-      <div>
-        <h2>From aligned audio to a gated impulse response</h2>
-        <div class="src">architecture.md &sect;6.3.3&ndash;&sect;6.3.9 &middot; metrao3-core::dsp</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          One pass per second on every measurement receiver. The four green steps are the ones that
-          only exist because the phase survived &mdash; they are the payoff of everything above.
-        </p>
-        <ol class="steps">
-          <li><div><div class="t">Align</div><div class="d">Clock window, then correlation against the decoded reference</div></div></li>
-          <li><div><div class="t">Segment</div><div class="d">Ring buffer 4&times;FFT, 75% overlap, hop 4 096</div></div></li>
-          <li><div><div class="t">Window &amp; FFT</div><div class="d">Hann periodic &middot; 16 384 pt real&rarr;complex &middot; 8 193 bins</div></div></li>
-          <li><div><div class="t">Cross-spectrum</div><div class="d">G<sub>xy</sub>, G<sub>xx</sub>, G<sub>yy</sub> accumulated over ~12 frames</div></div></li>
-          <li class="phase"><div><div class="t">H(f) &amp; coherence</div><div class="d">Complex H = &Sigma;G<sub>xy</sub>/&Sigma;G<sub>xx</sub> &middot; &gamma;&sup2; gate at 0.2</div></div></li>
-          <li class="phase"><div><div class="t">Inverse FFT</div><div class="d">Complex&rarr;real &mdash; this is the impulse response</div></div></li>
-          <li class="phase"><div><div class="t">Detect &amp; shift</div><div class="d">Direct arrival to a 10 ms margin, phase corrected</div></div></li>
-          <li class="phase"><div><div class="t">Time gate</div><div class="d">Tukey, 0 &rarr; arrival + 8 ms &middot; taper max(10%, 16 smp)</div></div></li>
-          <li><div><div class="t">Re-FFT &amp; smooth</div><div class="d">1/12 octave, constant-Q energy average, 131 points</div></div></li>
-          <li><div><div class="t">Calibrate &amp; publish</div><div class="d">Per-mic curve, then CBOR map + f32, NaN-native</div></div></li>
-        </ol>
-        <p class="note">
-          The 8 ms gate is what separates the loudspeaker from the room: it keeps the direct sound and
-          drops reflections beyond roughly 2.7 m of extra path. Gating is a time-domain operation on
-          <em>h(t)</em> &mdash; and without valid phase there is no <em>h(t)</em> to gate.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 07 ============ -->
-  <section class="section">
-    <div class="section-head">
-      <div class="idx">07</div>
-      <div>
-        <h2>The result declares its own timing quality</h2>
-        <div class="src">specs/cbor_schemas/tf-result.cddl &middot; field-vocabulary.yaml &middot; system-status.cddl</div>
-      </div>
-    </div>
-    <div class="body-cols">
-      <div class="spacer"></div>
-      <div class="stack">
-        <p>
-          &ldquo;Good enough&rdquo; is not a claim the system makes once at design time and then assumes forever.
-          Every published result carries the tier it was measured on, and the contract has a defined
-          shape for the case where that tier cannot support phase.
-        </p>
-        <div class="honest">
-          <div>
-            <code>timing_tier</code>
-            <p>A frozen enum on every transfer-function result:
-              <span class="mono">ntp_lan</span> / <span class="mono">ntp_internet</span> /
-              <span class="mono">gps_pps</span>. The consumer always knows which line of the chart above
-              its data was measured on.</p>
-          </div>
-          <div>
-            <code>phase[] = NaN</code>
-            <p>When the tier cannot support phase accuracy, the phase array is filled with NaN &mdash;
-              carried natively as f32, never a sentinel, never silently zeroed. Magnitude and coherence
-              stay valid and present. The array is always there; its emptiness is explicit.</p>
-          </div>
-          <div>
-            <code>&gamma;&sup2; &lt; 0.2 &rarr; excluded</code>
-            <p>Coherence gating is independent of any declared tier. A misalignment nobody predicted
-              still cancels the averaged cross-spectrum and drops coherence, and those bins leave the
-              output. The system degrades loudly.</p>
-          </div>
-        </div>
-        <p class="note">
-          The same discipline runs on the health path: <span class="mono">clock_source</span> and
-          <span class="mono">clock_offset_us</span> ride the status beat, so a node in GNSS holdover is
-          visibly in holdover and is ruled out of a measurement that needs a live fix &mdash; decided at
-          measurement time from published time quality, not from a profile baked in at install.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ verdict ============ -->
-  <div class="verdict">
-    <div class="verdict-head">
-      <div class="eyebrow">The conclusion</div>
-      <p>Time sync is good enough for a phase-accurate transfer curve &mdash; and therefore for a true
-        impulse response &mdash; on both measurement paths, for <em>n</em> nodes on any mix of links.</p>
-    </div>
-    <div class="routes">
-      <div class="route">
-        <div class="tag">Primary &middot; ADR-017 &sect;3</div>
-        <h3>Reference signal present</h3>
-        <p>Cross-correlation recovers the exact start sample from the audio itself, once every second.
-          The clocks only have to identify the right window &mdash; about 10 ms of slack, which even
-          internet NTP clears with room to spare. Alignment is sample-accurate, and the residual
-          propagation delay is then measured out of the impulse response itself.</p>
-        <div class="out">Phase valid: <b>20 Hz &ndash; 20 kHz, on any timing path including cloud NTP.</b></div>
-      </div>
-      <div class="route">
-        <div class="tag">Fallback &middot; ADR-017 &sect;4</div>
-        <h3>No reference signal available</h3>
-        <p>Timing must then come from the clocks, so the clocks are made good enough for the job. A
-          GPS-disciplined node holds &plusmn;1&ndash;5 &micro;s to UTC &mdash; under 36&deg; at 20 kHz, and under 2&deg; at
-          1 kHz &mdash; with LAN PTP at ~50 &micro;s as the segment-local tier beneath it.</p>
-        <div class="out">Phase valid: <b>whole band on GPS PPS; to ~2.5 kHz on LAN PTP.</b></div>
-      </div>
-    </div>
+  <div class="kpis">
+    <div class="kpi"><div class="v">&plusmn;1&ndash;5 &micro;s</div><div class="k">GPS PPS to UTC<br>per node, no network</div></div>
+    <div class="kpi"><div class="v">~50 &micro;s</div><div class="k">PTP across a<br>LAN segment</div></div>
+    <div class="kpi"><div class="v">20.8 &micro;s</div><div class="k">one sample<br>at 48 kHz</div></div>
+    <div class="kpi"><div class="v">n</div><div class="k">nodes, freely mixed<br>cloud / UMTS / LAN / Wi-Fi</div></div>
   </div>
 
-  <footer>
-    <div class="status">
-      <div class="h">Implementation status &mdash; stated plainly</div>
-      <p>This sheet documents the frozen design and the frozen wire contract. As of this revision
-        <span class="mono">mod-transfer-function</span> is a lifecycle stub &mdash; the DSP pipeline it describes is
-        specified and contract-bound but not yet running on devices &mdash; and the GPS/PPS rung of the
-        chrony ladder is not shipped on any unit yet. The SPL and 1/3-octave paths, by contrast, are
-        proven end-to-end on real Pi silicon.</p>
+  <section class="block">
+    <div class="block-head">
+      <span class="n">01</span><h2>Two planes, deliberately separate</h2>
+      <span class="sub">time goes up &middot; data goes down</span>
     </div>
-    <div class="refs">
-      <div><b>ADR-017</b> Timing strategy &mdash; use-case-driven time quality (supersedes ADR-004)</div>
-      <div><b>ADR-037</b> Cellular over USB, discrete GNSS &mdash; the modem has no PPS pin</div>
-      <div><b>ADR-033</b> LAN peer devices &mdash; the receiver timestamps accessory data on ingest</div>
-      <div><b>architecture.md</b> &sect;5 Time synchronisation &middot; &sect;6.3 Transfer function measurement</div>
-      <div><b>docs/connection-flowchart.md</b> &sect;5 Layer D &mdash; the clock</div>
-      <div><b>specs/</b> tf-result.cddl &middot; system-status.cddl &middot; field-vocabulary.yaml</div>
+    <svg id="planes" viewBox="0 0 660 292" role="img"
+      aria-label="Diagram of five measurement nodes. Above them a timing plane: a GNSS UTC source drops a 1PPS pulse into the reference node and node 1; the reference node acts as PTP master over a rail to nodes 2 and 3; node n has coarse NTP only. Below them a transport plane: each node's link, wired LAN, UMTS or Wi-Fi, joins one bus into the cloud broker over MQTT on WSS port 443."></svg>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <span class="n">02</span><h2>How much of the band carries trustworthy phase</h2>
+      <span class="sub">bar ends at 45&deg; error &middot; &Delta;&phi; = 360&deg;&middot;f&middot;&Delta;t</span>
     </div>
-    <div class="colophon">
-      <span>Metrao3 &mdash; distributed acoustic measurement platform</span>
-      <span>Sheet TS-01 &middot; Phase-accurate transfer curve &amp; impulse response</span>
+    <svg id="bands" viewBox="0 0 660 196" role="img"
+      aria-label="Horizontal bar chart of usable phase bandwidth from 20 hertz to 20 kilohertz. Cloud or internet NTP at plus or minus 10 milliseconds is usable below 20 hertz only. LAN NTP at plus or minus 1 millisecond reaches 125 hertz. PTP on the LAN at about 50 microseconds reaches 2.5 kilohertz. GPS PPS at plus or minus 1 to 5 microseconds covers the full band. Reference-signal correlation covers the full band on any link."></svg>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <span class="n">03</span><h2>From aligned audio to an impulse response</h2>
+      <span class="sub">once per second, on every node</span>
     </div>
-  </footer>
-</div>
+    <div class="chain">
+      <div class="step">
+        <div class="t">Align</div>
+        <div class="d">Clock picks the second (~10 ms is plenty). GPS PPS and PTP hold the fine time.</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step key">
+        <div class="t">Lock to the signal</div>
+        <div class="d">The known reference sits in every capture. Cross-correlation recovers the exact start sample.</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="t">Transform</div>
+        <div class="d">H(f) with magnitude, phase and coherence &rarr; IFFT &rarr; impulse response, gated at 8 ms.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <div class="t">Phase is accurate across <em>20 Hz &ndash; 20 kHz</em>, on <em>n</em> nodes, over any link &mdash;
+      so the result is a true impulse response, not magnitude only.</div>
+    <div class="s">With a reference signal, any timing tier reaches it. Without one, GPS PPS covers
+      the full band and PTP holds to ~2.5 kHz.</div>
+  </div>
+
+  <div class="foot">
+    <span>Sources: ADR-017 timing strategy &middot; ADR-037 discrete GNSS &middot; architecture.md &sect;5, &sect;6.3
+      &middot; specs/tf-result.cddl</span>
+    <span class="st">Design + frozen contract; the transfer-function module is not yet running on devices.</span>
+  </div>
+
+</div></div>
 
 <script>
 (function () {
   "use strict";
-
   var NS = "http://www.w3.org/2000/svg";
-  function el(name, attrs, text) {
-    var n = document.createElementNS(NS, name);
-    for (var k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
-    if (text !== undefined) n.textContent = text;
-    return n;
+  function el(n, a, t) {
+    var e = document.createElementNS(NS, n);
+    for (var k in a) if (a[k] !== null && a[k] !== undefined) e.setAttribute(k, a[k]);
+    if (t !== undefined) e.textContent = t;
+    return e;
   }
-  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-
-  var INK = css("--ink"), INK2 = css("--ink-2"), INK3 = css("--ink-3");
-  var RULE = css("--rule"), RULE2 = css("--rule-2"), PAPER = css("--paper");
-  var DEEP = css("--deep"), OK = css("--ok"), BAD = css("--bad"), WARN = css("--warn");
+  function v(x) { return getComputedStyle(document.documentElement).getPropertyValue(x).trim(); }
+  var INK = v("--ink"), INK2 = v("--ink-2"), INK3 = v("--ink-3");
+  var RULE = v("--rule"), RULE2 = v("--rule-2"), TINT = v("--tint"), PAPER = v("--paper");
+  var ACC = v("--accent"), GOOD = v("--good"), WARN = v("--warn"), BAD = v("--bad");
   var MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
   var SANS = '"Archivo", Helvetica, Arial, sans-serif';
 
-  /* ================= 1. phase-error nomogram ================= */
-
-  var L = 90, R = 860, T = 40, B = 440;          // plot box
-  var F0 = 20, F1 = 20000;                        // Hz
-  var D0 = 0.1, D1 = 1000;                        // degrees
-  var lgF0 = Math.log10(F0), spanF = Math.log10(F1) - lgF0;
-  var lgD0 = Math.log10(D0), spanD = Math.log10(D1) - lgD0;
-
-  function X(f) { return L + (Math.log10(f) - lgF0) / spanF * (R - L); }
-  function Y(d) { return B - (Math.log10(d) - lgD0) / spanD * (B - T); }
-  function fAt(x) { return Math.pow(10, lgF0 + (x - L) / (R - L) * spanF); }
-  function phi(f, dt) { return 360 * f * dt; }
-
-  var SERIES = [
-    { id: "s1", dt: 1e-2, color: css("--s1"), name: "Cloud / internet NTP", tag: "±10 ms",
-      short: "Cloud NTP ±10 ms", lx: null },
-    { id: "s2", dt: 1e-3, color: css("--s2"), name: "LAN NTP (Chrony)", tag: "±1 ms",
-      short: "LAN NTP ±1 ms", lx: null },
-    { id: "s3", dt: 5e-5, color: css("--s3"), name: "LAN PTP (Statime)", tag: "50 µs",
-      short: "LAN PTP 50 µs", lx: 1200 },
-    { id: "s4", dt: 5e-6, color: css("--s4"), name: "GPS PPS", tag: "±5 µs",
-      short: "GPS PPS ±5 µs", lx: 3000 }
-  ];
-  var SAMPLE_DT = 1 / 48000;
-
-  var svg = document.getElementById("nomogram");
-
-  // --- verdict bands (very faint; they encode the thresholds, not decoration)
-  var bands = [
-    { from: 180,  to: D1,  fill: BAD,  op: 0.055 },
-    { from: 45,   to: 180, fill: WARN, op: 0.055 },
-    { from: D0,   to: 5,   fill: OK,   op: 0.055 }
-  ];
-  bands.forEach(function (b) {
-    var y1 = Y(b.to), y2 = Y(b.from);
-    svg.appendChild(el("rect", { x: L, y: y1, width: R - L, height: y2 - y1,
-      fill: b.fill, "fill-opacity": b.op }));
-  });
-
-  // --- grid
-  var fTicks = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-  var fLabels = ["20", "50", "100", "200", "500", "1k", "2k", "5k", "10k", "20k"];
-  fTicks.forEach(function (f, i) {
-    var x = X(f);
-    svg.appendChild(el("line", { x1: x, y1: T, x2: x, y2: B, stroke: RULE, "stroke-width": 1 }));
-    svg.appendChild(el("text", { x: x, y: B + 20, fill: INK3, "font-family": MONO,
-      "font-size": 12, "text-anchor": "middle" }, fLabels[i]));
-  });
-  [0.1, 1, 10, 100, 1000].forEach(function (d) {
-    var y = Y(d);
-    svg.appendChild(el("line", { x1: L, y1: y, x2: R, y2: y, stroke: RULE, "stroke-width": 1 }));
-    svg.appendChild(el("text", { x: L - 12, y: y + 4, fill: INK3, "font-family": MONO,
-      "font-size": 12, "text-anchor": "end" }, (d < 1 ? "0.1" : String(d)) + "°"));
-  });
-
-  // --- threshold rules
-  function halo(t) { t.setAttribute("paint-order", "stroke"); t.setAttribute("stroke", PAPER);
-    t.setAttribute("stroke-width", 4); t.setAttribute("stroke-linejoin", "round"); return t; }
-
-  [{ d: 180, c: BAD,  txt: "180° — half a cycle, ambiguous" },
-   { d: 45,  c: WARN, txt: "45° — phase degraded" },
-   { d: 5,   c: OK,   txt: "5° — measurement grade below here" }].forEach(function (r) {
-    var y = Y(r.d);
-    svg.appendChild(el("line", { x1: L, y1: y, x2: R, y2: y, stroke: r.c,
-      "stroke-width": 1.25, "stroke-dasharray": "1 3", opacity: 0.85 }));
-    svg.appendChild(halo(el("text", { x: L + 7, y: y - 7, fill: r.c, "font-family": MONO,
-      "font-size": 11.5, "font-weight": 500 }, r.txt)));
-  });
-
-  // --- one-sample reference rule
-  (function () {
-    var pts = [], dIn = phi(F0, SAMPLE_DT);
-    var fStart = dIn < D0 ? D0 / (360 * SAMPLE_DT) : F0;
-    pts.push([X(fStart), Y(Math.max(phi(fStart, SAMPLE_DT), D0))]);
-    pts.push([X(F1), Y(phi(F1, SAMPLE_DT))]);
-    svg.appendChild(el("polyline", { points: pts.map(function (p) { return p.join(","); }).join(" "),
-      fill: "none", stroke: INK3, "stroke-width": 1.5, "stroke-dasharray": "6 4" }));
-    var lf = 250;
-    svg.appendChild(halo(el("text", { x: X(lf) + 8, y: Y(phi(lf, SAMPLE_DT)) - 9, fill: INK2,
-      "font-family": MONO, "font-size": 11.5 }, "1 sample @ 48 kHz = 20.8 µs")));
-  })();
-
-  // --- series
-  var groups = {};
-  SERIES.forEach(function (s) {
-    var g = el("g", { "data-series": s.id });
-    groups[s.id] = g;
-
-    // clip the straight line to the plot box
-    var fLo = F0, dLo = phi(F0, s.dt);
-    if (dLo < D0) { fLo = D0 / (360 * s.dt); dLo = D0; }
-    var fHi = F1, dHi = phi(F1, s.dt);
-    if (dHi > D1) { fHi = D1 / (360 * s.dt); dHi = D1; }
-
-    g.appendChild(el("line", { x1: X(fLo), y1: Y(dLo), x2: X(fHi), y2: Y(dHi),
-      stroke: s.color, "stroke-width": 2.4, "stroke-linecap": "round" }));
-
-    // endpoint marker (>=8px) only where the line actually terminates in-band
-    if (dHi <= D1 + 1e-9 && fHi >= F1 - 1e-6) {
-      g.appendChild(el("circle", { cx: X(fHi), cy: Y(dHi), r: 4.5, fill: s.color,
-        stroke: PAPER, "stroke-width": 2 }));
-    }
-
-    // direct label
-    var lx, ly, anchor = "start";
-    if (s.lx) { lx = X(s.lx) + 8; ly = Y(phi(s.lx, s.dt)) - 10; }
-    else { lx = X(fHi) + 7; ly = T + 15; }              // top-exiting lines label at the exit
-    g.appendChild(halo(el("text", { x: lx, y: ly, fill: s.color, "font-family": SANS,
-      "font-size": 13, "font-weight": 600, "text-anchor": anchor }, s.short)));
-
-    svg.appendChild(g);
-  });
-
-  // --- axes + titles
-  svg.appendChild(el("line", { x1: L, y1: B, x2: R, y2: B, stroke: INK, "stroke-width": 1.5 }));
-  svg.appendChild(el("line", { x1: L, y1: T, x2: L, y2: B, stroke: INK, "stroke-width": 1.5 }));
-  svg.appendChild(el("text", { x: (L + R) / 2, y: B + 48, fill: INK2, "font-family": MONO,
-    "font-size": 12, "text-anchor": "middle", "letter-spacing": "0.08em" }, "FREQUENCY (Hz)"));
-  var yt = el("text", { x: 24, y: (T + B) / 2, fill: INK2, "font-family": MONO,
-    "font-size": 12, "text-anchor": "middle", "letter-spacing": "0.08em",
-    transform: "rotate(-90 24 " + ((T + B) / 2) + ")" }, "PHASE ERROR (degrees)");
-  svg.appendChild(yt);
-
-  // --- crosshair + readout
-  var cross = el("line", { x1: L, y1: T, x2: L, y2: B, stroke: INK, "stroke-width": 1,
-    "stroke-dasharray": "3 3", opacity: 0 });
-  svg.appendChild(cross);
-  var dots = SERIES.map(function (s) {
-    var c = el("circle", { r: 5, fill: s.color, stroke: PAPER, "stroke-width": 2, opacity: 0 });
-    svg.appendChild(c); return c;
-  });
-
-  var readout = document.getElementById("readout");
-  var wrap = svg.parentNode;
-
-  function fmtF(f) { return f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 1 : 2) + " kHz"
-                                      : f.toFixed(f < 100 ? 1 : 0) + " Hz"; }
-  function fmtD(d) {
-    if (d >= 1000) return Math.round(d / 360) + " cycles";
-    if (d >= 10) return d.toFixed(0) + "°";
-    return d.toFixed(d < 1 ? 2 : 1) + "°";
+  function txt(p, s, o) {
+    o = o || {};
+    return el("text", {
+      x: p, y: s, fill: o.fill || INK2,
+      "font-family": o.sans ? SANS : MONO,
+      "font-size": o.size || 8.4,
+      "font-weight": o.w || 400,
+      "text-anchor": o.anchor || "start",
+      "letter-spacing": o.ls || 0
+    }, o.t);
+  }
+  function halo(t) {
+    t.setAttribute("paint-order", "stroke");
+    t.setAttribute("stroke", PAPER);
+    t.setAttribute("stroke-width", 3);
+    t.setAttribute("stroke-linejoin", "round");
+    return t;
   }
 
-  function move(ev) {
-    var box = svg.getBoundingClientRect();
-    var sx = (ev.clientX - box.left) / box.width * 900;
-    if (sx < L || sx > R) { leave(); return; }
-    var f = fAt(sx);
-    cross.setAttribute("x1", sx); cross.setAttribute("x2", sx); cross.setAttribute("opacity", 0.55);
-
-    var rows = "";
-    SERIES.forEach(function (s, i) {
-      var d = phi(f, s.dt);
-      var inBand = d >= D0 && d <= D1;
-      dots[i].setAttribute("opacity", inBand ? 1 : 0);
-      if (inBand) { dots[i].setAttribute("cx", sx); dots[i].setAttribute("cy", Y(d)); }
-      rows += '<div class="row"><span><span class="dot" style="background:' + s.color +
-        '"></span>' + s.name + '</span><span>' + fmtD(d) + "</span></div>";
-    });
-    rows += '<div class="row" style="opacity:.7"><span><span class="dot" style="background:' +
-      INK3 + '"></span>1 sample @ 48 kHz</span><span>' + fmtD(phi(f, SAMPLE_DT)) + "</span></div>";
-
-    readout.innerHTML = '<div class="hdr">' + fmtF(f) + "</div>" + rows;
-    readout.style.opacity = 1;
-
-    var wb = wrap.getBoundingClientRect();
-    var px = ev.clientX - wb.left + 16;
-    var py = ev.clientY - wb.top + 16;
-    if (px + readout.offsetWidth > wb.width - 8) px = ev.clientX - wb.left - readout.offsetWidth - 16;
-    if (py + readout.offsetHeight > wb.height - 8) py = ev.clientY - wb.top - readout.offsetHeight - 16;
-    readout.style.left = px + "px";
-    readout.style.top = py + "px";
-  }
-  function leave() {
-    cross.setAttribute("opacity", 0);
-    dots.forEach(function (d) { d.setAttribute("opacity", 0); });
-    readout.style.opacity = 0;
-  }
-  svg.addEventListener("pointermove", move);
-  svg.addEventListener("pointerleave", leave);
-
-  /* --- legend + cross-highlighting with the table --- */
-  var legend = document.getElementById("legend");
-  function emphasise(id) {
-    SERIES.forEach(function (s) {
-      groups[s.id].setAttribute("opacity", (!id || id === s.id) ? 1 : 0.22);
-    });
-    Array.prototype.forEach.call(document.querySelectorAll("tr[data-series]"), function (tr) {
-      tr.classList.toggle("hl", !!id && tr.getAttribute("data-series") === id);
-    });
-  }
-  SERIES.forEach(function (s) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.innerHTML = '<span class="swatch" style="background:' + s.color + '"></span>' +
-      s.name + " · " + s.tag;
-    b.addEventListener("mouseenter", function () { emphasise(s.id); });
-    b.addEventListener("focus", function () { emphasise(s.id); });
-    b.addEventListener("mouseleave", function () { emphasise(null); });
-    b.addEventListener("blur", function () { emphasise(null); });
-    legend.appendChild(b);
-  });
-  var oneS = document.createElement("button");
-  oneS.type = "button";
-  oneS.disabled = true;
-  oneS.style.cursor = "default";
-  oneS.innerHTML = '<span class="swatch" style="background:repeating-linear-gradient(90deg,' +
-    INK3 + ' 0 4px,transparent 4px 7px)"></span>1 sample @ 48 kHz · 20.8 µs';
-  legend.appendChild(oneS);
-
-  Array.prototype.forEach.call(document.querySelectorAll("tr[data-series]"), function (tr) {
-    tr.addEventListener("mouseenter", function () { emphasise(tr.getAttribute("data-series")); });
-    tr.addEventListener("mouseleave", function () { emphasise(null); });
-  });
-
-  /* ================= 2. alignment-stage diagram ================= */
-
-  var a = document.getElementById("align");
-  var AL = 170, AR = 862;
-
-  // deterministic pseudo-noise so the traces are stable across renders
-  var seed = 20250901;
-  function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
-
-  function waveform(x0, x1, yMid, amp, n, phase) {
-    var pts = [], i, t, v;
-    for (i = 0; i <= n; i++) {
-      t = i / n;
-      v = Math.sin((t * 41 + phase) * Math.PI) * 0.55
-        + Math.sin((t * 13.7 + phase * 0.7) * Math.PI) * 0.3
-        + (rnd() - 0.5) * 0.5;
-      v *= 0.55 + 0.45 * Math.sin(t * Math.PI);
-      pts.push((x0 + (x1 - x0) * t).toFixed(1) + "," + (yMid - v * amp).toFixed(1));
-    }
-    return pts.join(" ");
-  }
-
-  function rowLabel(y, kicker, title) {
-    a.appendChild(el("text", { x: 0, y: y - 6, fill: INK3, "font-family": MONO,
-      "font-size": 10.5, "letter-spacing": "0.1em" }, kicker));
-    a.appendChild(el("text", { x: 0, y: y + 11, fill: INK, "font-family": SANS,
-      "font-size": 13.5, "font-weight": 600 }, title));
-  }
-
-  // --- stage 1: two captures, offset, inside a loose clock window
-  var yA = 58, yB = 150, OFF = 62;
-
-  a.appendChild(el("rect", { x: AL - 40, y: yA - 34, width: (AR - AL) + 78, height: 164,
-    fill: DEEP, "fill-opacity": 0.045, stroke: DEEP, "stroke-opacity": 0.28,
-    "stroke-width": 1, "stroke-dasharray": "4 4" }));
-  a.appendChild(el("text", { x: AL - 40, y: yA - 44, fill: DEEP, "font-family": MONO,
-    "font-size": 11, "font-weight": 500 },
-    "STAGE 1  ·  wall clock selects the second  ·  ≈ 10 ms of slack is plenty"));
-
-  rowLabel(yA, "REFERENCE SLOT", "Ref capture");
-  a.appendChild(el("rect", { x: AL, y: yA - 26, width: AR - AL, height: 52, fill: PAPER,
-    stroke: RULE2, "stroke-width": 1 }));
-  a.appendChild(el("polyline", { points: waveform(AL + 6, AR - 6, yA, 21, 210, 0.0),
-    fill: "none", stroke: css("--s1"), "stroke-width": 1.1, "stroke-linejoin": "round" }));
-
-  rowLabel(yB, "MEASUREMENT SLOT", "Local capture");
-  a.appendChild(el("rect", { x: AL, y: yB - 26, width: AR - AL, height: 52, fill: PAPER,
-    stroke: RULE2, "stroke-width": 1 }));
-  seed = 20250901;   // same content, shifted
-  a.appendChild(el("polyline", { points: waveform(AL + 6 + OFF, AR - 6 + OFF, yB, 21, 210, 0.0),
-    fill: "none", stroke: INK2, "stroke-width": 1.1, "stroke-linejoin": "round",
-    "clip-path": "url(#clipB)" }));
-  var defs = el("defs", {});
-  var cp = el("clipPath", { id: "clipB" });
-  cp.appendChild(el("rect", { x: AL + 1, y: yB - 25, width: AR - AL - 2, height: 50 }));
-  defs.appendChild(cp);
-  a.appendChild(defs);
-
-  // offset bracket, in the gap between the two capture rows
-  var bracketY = yA + 52;
-  a.appendChild(el("line", { x1: AL + 6, y1: yA + 28, x2: AL + 6, y2: bracketY + 6,
-    stroke: OK, "stroke-width": 1 }));
-  a.appendChild(el("line", { x1: AL + 6 + OFF, y1: bracketY - 6, x2: AL + 6 + OFF, y2: yB - 28,
-    stroke: OK, "stroke-width": 1 }));
-  a.appendChild(el("line", { x1: AL + 6, y1: bracketY, x2: AL + 6 + OFF, y2: bracketY,
-    stroke: OK, "stroke-width": 1.8 }));
-  a.appendChild(halo(el("text", { x: AL + 6 + OFF + 12, y: bracketY + 4, fill: OK,
-    "font-family": MONO, "font-size": 11.5, "font-weight": 500 },
-    "unknown offset: clock error + time of flight")));
-
-  // --- stage 2: correlation
-  var yC = 274;
-  a.appendChild(el("text", { x: AL - 40, y: yC - 52, fill: DEEP, "font-family": MONO,
-    "font-size": 11, "font-weight": 500 },
-    "STAGE 2  ·  cross-correlate the known reference against the local capture"));
-  rowLabel(yC, "CORRELATION", "Sample lock");
-  a.appendChild(el("rect", { x: AL, y: yC - 34, width: AR - AL, height: 62, fill: PAPER,
-    stroke: RULE2, "stroke-width": 1 }));
-  a.appendChild(el("line", { x1: AL + 1, y1: yC + 22, x2: AR - 1, y2: yC + 22,
-    stroke: RULE, "stroke-width": 1 }));
-  (function () {
-    var pts = [], i, x, t, v, pk = AL + 6 + OFF;
-    for (i = 0; i <= 300; i++) {
-      x = AL + 6 + (AR - AL - 12) * (i / 300);
-      t = (x - pk) / 26;
-      v = Math.exp(-t * t * 0.5) * Math.cos(t * 1.35);
-      v += (rnd() - 0.5) * 0.10;
-      pts.push(x.toFixed(1) + "," + (yC + 22 - v * 48).toFixed(1));
-    }
-    a.appendChild(el("polyline", { points: pts.join(" "), fill: "none", stroke: OK,
-      "stroke-width": 1.4, "stroke-linejoin": "round" }));
-    a.appendChild(el("circle", { cx: pk, cy: yC - 26, r: 4.5, fill: OK,
-      stroke: PAPER, "stroke-width": 2 }));
-    a.appendChild(halo(el("text", { x: pk + 12, y: yC - 22, fill: OK, "font-family": MONO,
-      "font-size": 11.5, "font-weight": 500 },
-      "peak → exact start sample  ·  1 sample = 20.8 µs")));
-  })();
-
-  // --- stage 3: impulse response + gate
-  var yD = 382;
-  a.appendChild(el("text", { x: AL - 40, y: yD - 46, fill: DEEP, "font-family": MONO,
-    "font-size": 11, "font-weight": 500 },
-    "STAGE 3  ·  the impulse response resolves the residual and is gated"));
-  rowLabel(yD, "IFFT OF H(f)", "Impulse response");
-  a.appendChild(el("rect", { x: AL, y: yD - 30, width: AR - AL, height: 54, fill: PAPER,
-    stroke: RULE2, "stroke-width": 1 }));
-  (function () {
-    var base = yD + 22, arr = AL + 120, gateEnd = arr + 210;
-    a.appendChild(el("rect", { x: arr, y: yD - 29, width: gateEnd - arr, height: 52,
-      fill: OK, "fill-opacity": 0.075 }));
-    a.appendChild(el("line", { x1: AL + 1, y1: base, x2: AR - 1, y2: base,
-      stroke: RULE, "stroke-width": 1 }));
-    var i, x, h, amp;
-    for (i = 0; i < 300; i++) {
-      x = AL + 6 + (AR - AL - 12) * (i / 300);
-      if (x < arr - 2) { amp = (rnd() - 0.5) * 3; }
-      else {
-        var u = (x - arr) / 34;
-        amp = 46 * Math.exp(-u * 0.42) * (Math.abs(Math.sin(u * 3.1)) * 0.55 + (u < 0.35 ? 0.9 : 0));
-        amp *= (0.55 + rnd() * 0.9);
-        if (u > 2.4) amp *= 0.5;
-      }
-      amp = Math.min(Math.abs(amp), 47);
-      a.appendChild(el("line", { x1: x, y1: base, x2: x, y2: base - Math.max(Math.abs(amp), 0.6),
-        stroke: x <= gateEnd && x >= arr - 2 ? INK : RULE2, "stroke-width": 1.6 }));
-    }
-    a.appendChild(el("line", { x1: arr, y1: yD - 29, x2: arr, y2: base + 3, stroke: OK,
-      "stroke-width": 1.5 }));
-    a.appendChild(el("line", { x1: gateEnd, y1: yD - 29, x2: gateEnd, y2: base + 3, stroke: OK,
-      "stroke-width": 1.5, "stroke-dasharray": "3 3" }));
-    a.appendChild(halo(el("text", { x: arr - 10, y: yD - 14, fill: OK, "font-family": MONO,
-      "font-size": 11.5, "font-weight": 500, "text-anchor": "end" }, "direct arrival →")));
-    a.appendChild(halo(el("text", { x: gateEnd + 8, y: yD - 18, fill: INK2,
-      "font-family": MONO, "font-size": 11.5 }, "Tukey gate ends  ·  arrival + 8 ms")));
-  })();
-
-  // scale note under stage 3
-  a.appendChild(el("text", { x: AL, y: 428, fill: INK3, "font-family": MONO, "font-size": 11 },
-    "each stage is 3–4 orders of magnitude tighter than the one above it  ·  ≈10 ms → 20.8 µs → sub-sample"));
-  /* ================= 3. n-node, two-plane topology ================= */
-
-  var tp = document.getElementById("topology");
-  var S4 = css("--s4"), S3 = css("--s3"), S1 = css("--s1"), PAPER3 = css("--paper-3");
+  /* ============ 01 · two planes ============ */
+  var g = document.getElementById("planes");
 
   var NODES = [
-    { t: "REF",      s: "slot A · source", fine: "gnss", master: true,  link: "wired LAN" },
-    { t: "Node 01",  s: "measurement",     fine: "gnss", master: false, link: "UMTS" },
-    { t: "Node 02",  s: "measurement",     fine: "gnss", master: false, link: "UMTS" },
-    { t: "Node 03",  s: "measurement",     fine: "ptp",  master: false, link: "wired LAN" },
-    { t: "Node 04",  s: "measurement",     fine: "ptp",  master: false, link: "wired LAN" },
-    { t: "Node n",   s: "auxiliary",       fine: "none", master: false, link: "Wi-Fi" }
+    { t: "REF",     s: "reference source", fine: "gnss", link: "wired LAN" },
+    { t: "Node 1",  s: "measurement",      fine: "gnss", link: "UMTS" },
+    { t: "Node 2",  s: "measurement",      fine: "ptp",  link: "wired LAN" },
+    { t: "Node 3",  s: "measurement",      fine: "ptp",  link: "wired LAN" },
+    { t: "Node n",  s: "auxiliary",        fine: "ntp",  link: "Wi-Fi" }
+  ];
+  var NW = 115, NGAP = 20, NX = 2, NY = 118, NH = 50;
+  NODES.forEach(function (n, i) { n.x = NX + i * (NW + NGAP); n.cx = n.x + NW / 2; });
+
+  // plane captions
+  g.appendChild(txt(0, 9, { t: "TIMING PLANE — CARRIES THE PHASE", fill: ACC, w: 600, ls: ".14em", size: 8 }));
+  g.appendChild(txt(660, 9, { t: "GPS PPS  +  PTP", fill: ACC, w: 600, anchor: "end", size: 8, ls: ".08em" }));
+  g.appendChild(el("line", { x1: 0, y1: 15, x2: 660, y2: 15, stroke: ACC, "stroke-opacity": .3 }));
+
+  // GNSS source
+  var gn = NODES.filter(function (n) { return n.fine === "gnss"; });
+  var gx0 = gn[0].x, gx1 = gn[gn.length - 1].x + NW;
+  g.appendChild(el("rect", { x: gx0, y: 28, width: gx1 - gx0, height: 24, rx: 2,
+    fill: GOOD, "fill-opacity": .10, stroke: GOOD, "stroke-width": 1.2 }));
+  g.appendChild(txt(gx0 + 10, 44, { t: "GNSS · UTC", fill: GOOD, w: 600, size: 9.6 }));
+  g.appendChild(txt(gx1 - 10, 44, { t: "1PPS → GPIO 17", fill: INK2, anchor: "end", size: 8 }));
+  gn.forEach(function (n) {
+    g.appendChild(el("line", { x1: n.cx, y1: 52, x2: n.cx, y2: NY - 6, stroke: GOOD, "stroke-width": 1.8 }));
+    for (var k = 0; k < 2; k++)
+      g.appendChild(el("rect", { x: n.cx - 2.5, y: 64 + k * 20, width: 5, height: 8, fill: GOOD }));
+    g.appendChild(el("polygon", { points: (n.cx - 4) + "," + (NY - 7) + " " + (n.cx + 4) + "," + (NY - 7) +
+      " " + n.cx + "," + NY, fill: GOOD }));
+  });
+
+  // PTP rail: REF is master, nodes 2 and 3 slave
+  var sl = NODES.filter(function (n) { return n.fine === "ptp"; });
+  var rail = 98;
+  g.appendChild(el("line", { x1: NODES[0].cx + 22, y1: NY - 6, x2: NODES[0].cx + 22, y2: rail,
+    stroke: ACC, "stroke-width": 1.8 }));
+  g.appendChild(el("circle", { cx: NODES[0].cx + 22, cy: NY - 6, r: 3.2, fill: ACC }));
+  g.appendChild(el("line", { x1: NODES[0].cx + 22, y1: rail, x2: sl[sl.length - 1].cx, y2: rail,
+    stroke: ACC, "stroke-width": 1.8 }));
+  sl.forEach(function (n) {
+    g.appendChild(el("line", { x1: n.cx, y1: rail, x2: n.cx, y2: NY - 6, stroke: ACC, "stroke-width": 1.8 }));
+    g.appendChild(el("polygon", { points: (n.cx - 4) + "," + (NY - 7) + " " + (n.cx + 4) + "," + (NY - 7) +
+      " " + n.cx + "," + NY, fill: ACC }));
+  });
+  g.appendChild(halo(txt(NODES[0].cx + 30, rail - 5, { t: "PTP domain · REF is master · ~50 µs",
+    fill: ACC, w: 500 })));
+
+  // coarse-only node
+  var aux = NODES[4];
+  g.appendChild(el("rect", { x: aux.x, y: 28, width: NW, height: 24, rx: 2, fill: "none",
+    stroke: RULE2, "stroke-width": 1, "stroke-dasharray": "3 3" }));
+  g.appendChild(txt(aux.x + 10, 44, { t: "coarse NTP", fill: INK3, w: 500, size: 9.6 }));
+  g.appendChild(el("line", { x1: aux.cx, y1: 52, x2: aux.cx, y2: NY - 6, stroke: RULE2,
+    "stroke-width": 1.4, "stroke-dasharray": "3 4" }));
+  g.appendChild(halo(txt(aux.cx - 9, 86, { t: "no fine time —", fill: INK3, anchor: "end" })));
+  g.appendChild(halo(txt(aux.cx - 9, 97, { t: "magnitude + context", fill: INK3, anchor: "end" })));
+
+  // node row
+  NODES.forEach(function (n) {
+    var c = n.fine === "gnss" ? GOOD : (n.fine === "ptp" ? ACC : RULE2);
+    g.appendChild(el("rect", { x: n.x, y: NY, width: NW, height: NH, fill: PAPER,
+      stroke: n.t === "REF" ? INK : RULE2, "stroke-width": n.t === "REF" ? 1.6 : 1 }));
+    g.appendChild(el("rect", { x: n.x, y: NY, width: NW, height: 3.5, fill: c }));
+    g.appendChild(txt(n.x + 10, NY + 24, { t: n.t, fill: INK, sans: true, size: 12.5, w: 700 }));
+    g.appendChild(txt(n.x + 10, NY + 38, { t: n.s, fill: INK3, size: 8 }));
+  });
+
+  // transport plane
+  var tY = NY + NH, bus = 214;
+  g.appendChild(el("line", { x1: 0, y1: 196, x2: 660, y2: 196, stroke: INK, "stroke-opacity": .22 }));
+  NODES.forEach(function (n) {
+    g.appendChild(el("line", { x1: n.cx, y1: tY, x2: n.cx, y2: bus, stroke: RULE2, "stroke-width": 1.1 }));
+    g.appendChild(halo(txt(n.cx, tY + 15, { t: n.link, fill: INK2, anchor: "middle" })));
+  });
+  g.appendChild(el("line", { x1: NODES[0].cx, y1: bus, x2: NODES[4].cx, y2: bus,
+    stroke: RULE2, "stroke-width": 1.1 }));
+  g.appendChild(halo(txt(0, 208, { t: "TRANSPORT PLANE — CARRIES THE DATA", fill: INK2, w: 600,
+    ls: ".14em", size: 8 })));
+
+  var bx = 178, bw = 304, by = 244, bh = 40;
+  g.appendChild(el("line", { x1: 330, y1: bus, x2: 330, y2: by - 7, stroke: RULE2, "stroke-width": 1.1 }));
+  g.appendChild(el("polygon", { points: "326," + (by - 8) + " 334," + (by - 8) + " 330," + by, fill: RULE2 }));
+  g.appendChild(el("rect", { x: bx, y: by, width: bw, height: bh, rx: 2, fill: TINT,
+    stroke: INK, "stroke-width": 1.3 }));
+  g.appendChild(txt(bx + 14, by + 18, { t: "CLOUD", fill: INK, sans: true, size: 12, w: 700 }));
+  g.appendChild(txt(bx + 66, by + 18, { t: "one MQTT broker · WSS / 443", fill: INK2, size: 8.6 }));
+  g.appendChild(txt(bx + 14, by + 31, { t: "audio · results · settings · coarse NTP", fill: INK3, size: 8 }));
+  g.appendChild(txt(658, by + 18, { t: "any link, freely mixed —", fill: INK3, anchor: "end" }));
+  g.appendChild(txt(658, by + 30, { t: "none of them carries the phase", fill: INK3, anchor: "end" }));
+
+  /* ============ 02 · usable phase bandwidth ============ */
+  var c = document.getElementById("bands");
+  var PL = 168, PR = 556, PT = 16, ROW = 30, BARH = 15;
+  var F0 = 20, F1 = 20000, l0 = Math.log10(F0), sp = Math.log10(F1) - l0;
+  function X(f) { return PL + (Math.log10(Math.max(f, F0)) - l0) / sp * (PR - PL); }
+
+  var ROWS = [
+    { name: "Cloud / internet NTP", acc: "±10 ms",   lim: 12.5,  col: BAD,  note: "below 20 Hz" },
+    { name: "LAN NTP (Chrony)",     acc: "±1 ms",    lim: 125,   col: BAD,  note: "125 Hz" },
+    { name: "PTP on the LAN",       acc: "~50 µs",   lim: 2500,  col: WARN, note: "2.5 kHz" },
+    { name: "GPS PPS at the node",  acc: "±1–5 µs",  lim: 25000, col: GOOD, note: "full band" },
+    { name: "+ reference signal",   acc: "any link", lim: 25000, col: GOOD, note: "full band" }
   ];
 
-  var NW = 118, NGAP = 26.4, NX0 = 30, NY = 205, NH = 58;
-  NODES.forEach(function (n, i) { n.x = NX0 + i * (NW + NGAP); n.cx = n.x + NW / 2; });
+  // grid
+  var ticks = [[20, "20 Hz"], [100, "100"], [1000, "1 k"], [10000, ""], [20000, "20 kHz"]];
+  ticks.forEach(function (t) {
+    c.appendChild(el("line", { x1: X(t[0]), y1: PT - 4, x2: X(t[0]), y2: PT + ROWS.length * ROW - 6,
+      stroke: RULE, "stroke-width": 1 }));
+    if (t[1]) c.appendChild(txt(X(t[0]), PT + ROWS.length * ROW + 8, { t: t[1], fill: INK3,
+      anchor: t[0] === 20 ? "start" : (t[0] === 20000 ? "end" : "middle"), size: 8 }));
+  });
+  c.appendChild(txt(PL, PT - 8, { t: "AUDIO BAND", fill: INK3, ls: ".14em", size: 7.4 }));
 
-  function tlabel(x, y, txt, opts) {
-    opts = opts || {};
-    return el("text", {
-      x: x, y: y, fill: opts.fill || INK2,
-      "font-family": opts.sans ? SANS : MONO,
-      "font-size": opts.size || 11,
-      "font-weight": opts.weight || 400,
-      "text-anchor": opts.anchor || "start",
-      "letter-spacing": opts.ls || "0"
-    }, txt);
-  }
-
-  /* --- plane headers --- */
-  tp.appendChild(el("text", { x: 4, y: 20, fill: DEEP, "font-family": MONO, "font-size": 11,
-    "font-weight": 500, "letter-spacing": "0.12em" }, "TIMING PLANE  ·  CARRIES THE PHASE"));
-  tp.appendChild(el("line", { x1: 4, y1: 28, x2: 876, y2: 28, stroke: DEEP,
-    "stroke-opacity": 0.35, "stroke-width": 1 }));
-
-  /* --- GNSS bar over the GPS-equipped nodes --- */
-  var gnssNodes = NODES.filter(function (n) { return n.fine === "gnss"; });
-  var gx0 = gnssNodes[0].x, gx1 = gnssNodes[gnssNodes.length - 1].x + NW;
-  tp.appendChild(el("rect", { x: gx0, y: 46, width: gx1 - gx0, height: 34,
-    fill: S4, "fill-opacity": 0.13, stroke: S4, "stroke-width": 1.4 }));
-  tp.appendChild(tlabel(gx0 + 12, 68, "GNSS  ·  UTC  ·  Quectel LC76G",
-    { fill: INK, weight: 500, size: 12 }));
-  gnssNodes.forEach(function (n) {
-    tp.appendChild(el("line", { x1: n.cx, y1: 80, x2: n.cx, y2: NY, stroke: S4,
-      "stroke-width": 2 }));
-    for (var k = 0; k < 3; k++) {
-      tp.appendChild(el("rect", { x: n.cx - 3, y: 96 + k * 30, width: 6, height: 9, fill: S4 }));
+  ROWS.forEach(function (r, i) {
+    var y = PT + i * ROW, full = r.lim >= F1;
+    if (i === 4) {
+      c.appendChild(el("line", { x1: 0, y1: y - 7, x2: 660, y2: y - 7,
+        stroke: RULE2, "stroke-dasharray": "3 3", "stroke-width": 1 }));
     }
-  });
-  tp.appendChild(tlabel(gnssNodes[gnssNodes.length - 1].cx + 14, 122,
-    "1PPS → GPIO 17", { fill: INK, weight: 500 }));
-  tp.appendChild(tlabel(gnssNodes[gnssNodes.length - 1].cx + 14, 138,
-    "±1–5 µs  ·  needs no network", { fill: INK3 }));
+    c.appendChild(txt(0, y + 10, { t: r.name, fill: INK, sans: true, size: 10, w: 600 }));
+    c.appendChild(txt(164, y + 10, { t: r.acc, fill: INK3, anchor: "end", size: 8.4 }));
 
-  /* --- PTP rail from the master to its LAN slaves --- */
-  var master = NODES[0];
-  var slaves = NODES.filter(function (n) { return n.fine === "ptp"; });
-  var railY = 178;
-  tp.appendChild(el("line", { x1: master.cx + 26, y1: railY,
-    x2: slaves[slaves.length - 1].cx, y2: railY, stroke: S3, "stroke-width": 2 }));
-  tp.appendChild(el("line", { x1: master.cx + 26, y1: NY - 22, x2: master.cx + 26, y2: railY,
-    stroke: S3, "stroke-width": 2 }));
-  tp.appendChild(el("circle", { cx: master.cx + 26, cy: NY - 22, r: 4, fill: S3 }));
-  slaves.forEach(function (n) {
-    tp.appendChild(el("line", { x1: n.cx, y1: railY, x2: n.cx, y2: NY, stroke: S3,
-      "stroke-width": 2 }));
-    tp.appendChild(el("polygon", { points: (n.cx - 4) + "," + (NY - 9) + " " +
-      (n.cx + 4) + "," + (NY - 9) + " " + n.cx + "," + NY, fill: S3 }));
-  });
-  tp.appendChild(halo(tlabel(slaves[0].cx - 96, railY - 9,
-    "PTP domain  ·  Statime  ·  ~50 µs", { fill: INK, weight: 500 })));
-
-  /* --- coarse-only node --- */
-  var aux = NODES[NODES.length - 1];
-  tp.appendChild(el("line", { x1: aux.cx, y1: 96, x2: aux.cx, y2: NY, stroke: S1,
-    "stroke-width": 1.6, "stroke-dasharray": "4 5" }));
-  tp.appendChild(halo(tlabel(aux.cx - 10, 112, "coarse NTP only",
-    { fill: INK2, anchor: "end" })));
-  tp.appendChild(halo(tlabel(aux.cx - 10, 127, "magnitude + context",
-    { fill: INK3, anchor: "end" })));
-
-  /* --- the node row --- */
-  NODES.forEach(function (n) {
-    var accent = n.fine === "gnss" ? S4 : (n.fine === "ptp" ? S3 : S1);
-    tp.appendChild(el("rect", { x: n.x, y: NY, width: NW, height: NH, fill: PAPER,
-      stroke: n.master ? DEEP : RULE2, "stroke-width": n.master ? 1.8 : 1.2 }));
-    tp.appendChild(el("rect", { x: n.x, y: NY, width: NW, height: 4, fill: accent }));
-    tp.appendChild(tlabel(n.x + 11, NY + 26, n.t,
-      { fill: INK, sans: true, size: 14, weight: 600 }));
-    tp.appendChild(tlabel(n.x + 11, NY + 43, n.s, { fill: INK3, size: 10.5 }));
+    // track
+    c.appendChild(el("rect", { x: PL, y: y, width: PR - PL, height: BARH, fill: TINT }));
+    var w = Math.max(X(Math.min(r.lim, F1)) - PL, 2.5);
+    c.appendChild(el("rect", { x: PL, y: y, width: w, height: BARH, rx: 2, fill: r.col,
+      "fill-opacity": full ? .92 : .8 }));
+    if (full) {
+      c.appendChild(el("polygon", { points: (PR) + "," + y + " " + (PR + 9) + "," + (y + BARH / 2) +
+        " " + PR + "," + (y + BARH), fill: r.col, "fill-opacity": .92 }));
+    }
+    c.appendChild(txt(full ? PR + 14 : PL + w + 7, y + 11, { t: r.note,
+      fill: full ? GOOD : r.col, w: 600, size: 8.6 }));
   });
 
-  /* --- transport plane --- */
-  var tY = NY + NH;
-  tp.appendChild(el("line", { x1: 4, y1: 300, x2: 876, y2: 300, stroke: INK,
-    "stroke-opacity": 0.3, "stroke-width": 1 }));
-
-  var collector = 350;
-  NODES.forEach(function (n) {
-    tp.appendChild(el("line", { x1: n.cx, y1: tY, x2: n.cx, y2: collector, stroke: RULE2,
-      "stroke-width": 1.2 }));
-    tp.appendChild(halo(tlabel(n.cx, tY + 18, n.link, { fill: INK2, anchor: "middle" })));
-  });
-  tp.appendChild(el("line", { x1: NODES[0].cx, y1: collector, x2: NODES[5].cx, y2: collector,
-    stroke: RULE2, "stroke-width": 1.2 }));
-  tp.appendChild(halo(el("text", { x: 4, y: 318, fill: INK2, "font-family": MONO, "font-size": 11,
-    "font-weight": 500, "letter-spacing": "0.12em" }, "TRANSPORT PLANE  ·  CARRIES THE DATA")));
-
-  var bx = 268, bw = 344, by = 382, bh = 62;
-  tp.appendChild(el("line", { x1: 450, y1: collector, x2: 450, y2: by, stroke: RULE2,
-    "stroke-width": 1.2 }));
-  tp.appendChild(el("polygon", { points: "446," + (by - 9) + " 454," + (by - 9) + " 450," + by,
-    fill: RULE2 }));
-  tp.appendChild(el("rect", { x: bx, y: by, width: bw, height: bh, fill: PAPER,
-    stroke: INK, "stroke-width": 1.5 }));
-  tp.appendChild(tlabel(bx + 16, by + 25, "MQTT broker  ·  WSS / 443  ·  CBOR",
-    { fill: INK, sans: true, size: 14, weight: 600 }));
-  tp.appendChild(tlabel(bx + 16, by + 45,
-    "also serves: coarse NTP · retained settings · orchestration", { fill: INK3, size: 10.5 }));
-
-  tp.appendChild(halo(tlabel(4, 462,
-    "one link per node, freely mixed  ·  the transport is never on the phase path",
-    { fill: INK3 })));
-
+  /* ============ fit the sheet to the viewport on screen ============ */
+  var page = document.querySelector(".page"), stage = document.querySelector(".stage");
+  function fit() {
+    page.style.transform = "none";
+    stage.style.height = "";
+    var avail = stage.clientWidth - 32, w = page.offsetWidth;
+    if (w > avail) {
+      var s = avail / w;
+      page.style.transform = "scale(" + s + ")";
+      stage.style.height = (page.offsetHeight * s + 48) + "px";
+    }
+  }
+  fit();
+  addEventListener("resize", fit);
+  addEventListener("beforeprint", function () { page.style.transform = "none"; });
+  addEventListener("afterprint", fit);
 })();
 </script>
