@@ -1,0 +1,421 @@
+<title>Transfer Function 10-Average</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#FFFFFF; --ground:#E7EAEC; --tint:#F3F5F7; --tint-2:#EAEEF1;
+  --ink:#0E1A24; --ink-2:#4A5B68; --ink-3:#8A99A3;
+  --rule:#DCE2E6; --rule-2:#BAC4CA;
+  --avg:#0B5C8A;      /* the 10-curve average */
+  --band:#0B5C8A;     /* +/-1 sigma spread */
+  --coh:#0E7A54;      /* coherence */
+  --gate:#B4740B;     /* coherence gate */
+  --sans:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);font-family:var(--sans);color:var(--ink);
+  -webkit-font-smoothing:antialiased}
+.stage{padding:22px 14px;display:flex;justify-content:center}
+.page{width:186mm;min-height:271mm;flex:none;background:var(--paper);transform-origin:top center;
+  box-shadow:0 1px 2px rgba(14,26,36,.10),0 10px 34px rgba(14,26,36,.13);
+  padding:11mm 11mm 8mm;display:flex;flex-direction:column;gap:9px}
+
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;
+  border-bottom:2px solid var(--ink);padding-bottom:8px}
+.kicker{font-family:var(--mono);font-size:8px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:5px}
+h1{font-size:23px;line-height:1.03;letter-spacing:-.024em;font-weight:700;margin:0}
+h1 span{color:var(--avg)}
+.stamp{font-family:var(--mono);font-size:8.6px;color:var(--ink-3);text-align:right;line-height:1.6}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+.settings{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--rule);
+  background:var(--tint)}
+.st{padding:6px 9px;border-right:1px solid var(--rule)}
+.st:last-child{border-right:0}
+.st .k{font-family:var(--mono);font-size:7.2px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3)}
+.st .v{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);margin-top:2px;
+  font-variant-numeric:tabular-nums}
+
+.chart{border:1px solid var(--rule-2);background:var(--paper)}
+.chart-head{display:flex;align-items:baseline;gap:8px;padding:6px 9px 4px;
+  border-bottom:1px solid var(--rule)}
+.chart-head h2{font-size:11.6px;font-weight:700;letter-spacing:-.01em;margin:0}
+.chart-head .u{font-family:var(--mono);font-size:8px;color:var(--ink-3)}
+.chart-head .lg{margin-left:auto;display:flex;gap:11px;font-family:var(--mono);font-size:8px;
+  color:var(--ink-2);align-items:center}
+.chart-head .lg i{display:inline-block;width:15px;height:0;border-top-width:2px;
+  border-top-style:solid;margin-right:4px;vertical-align:middle}
+.chart-body{padding:5px 8px 6px}
+svg{display:block;width:100%;height:auto}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.method{border:1px solid var(--rule-2);background:var(--paper)}
+.method-head{padding:6px 9px 5px;border-bottom:1px solid var(--rule);
+  display:flex;align-items:baseline;gap:8px}
+.method-head h2{font-size:11.6px;font-weight:700;margin:0}
+.method-head .u{font-family:var(--mono);font-size:8px;color:var(--ink-3);margin-left:auto}
+.m-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.m{padding:8px 10px 9px;border-right:1px solid var(--rule)}
+.m:last-child{border-right:0}
+.m .q{font-family:var(--mono);font-size:7.4px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3)}
+.m .f{font-family:var(--mono);font-size:9.6px;color:var(--avg);margin:4px 0 4px;line-height:1.35;
+  font-weight:500}
+.m .d{font-size:9.2px;line-height:1.45;color:var(--ink-2)}
+
+.members{border:1px solid var(--rule);background:var(--tint);padding:7px 9px;
+  display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.members .lbl{font-family:var(--mono);font-size:7.4px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin-right:4px}
+.chip{font-family:var(--mono);font-size:8.4px;background:var(--paper);border:1px solid var(--rule-2);
+  padding:2px 7px;color:var(--ink-2);display:flex;align-items:center;gap:5px}
+.chip i{width:8px;height:2px;background:var(--ink-3);display:inline-block}
+
+.foot{display:flex;justify-content:space-between;gap:14px;margin-top:auto;padding-top:7px;
+  border-top:1px solid var(--rule);font-family:var(--mono);font-size:7.4px;color:var(--ink-3);
+  line-height:1.5}
+.foot .warn{color:var(--gate)}
+
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{background:#fff}
+  .stage{padding:0;display:block}
+  .page{width:auto;min-height:0;box-shadow:none;padding:0;transform:none!important}
+  .chart,.method,.settings{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+
+<div class="stage"><div class="page">
+
+  <header class="head">
+    <div>
+      <div class="kicker">FFT Analyser &middot; transfer function measurement</div>
+      <h1>10 Captures, <span>One Average</span></h1>
+    </div>
+    <div class="stamp">
+      <div><b>Group</b> &nbsp;DUT &mdash; on-axis set</div>
+      <div><b>Members</b> &nbsp;10 stored curves</div>
+      <div><b>Engine</b> &nbsp;TransferFunctionEngine + computeGroupAverage</div>
+    </div>
+  </header>
+
+  <div class="settings">
+    <div class="st"><div class="k">FFT size</div><div class="v">16 384</div></div>
+    <div class="st"><div class="k">Sample rate</div><div class="v">48 kHz</div></div>
+    <div class="st"><div class="k">Resolution</div><div class="v">2.93 Hz</div></div>
+    <div class="st"><div class="k">Window / overlap</div><div class="v">Rect &middot; 50%</div></div>
+    <div class="st"><div class="k">Frame averaging</div><div class="v">8 frames</div></div>
+    <div class="st"><div class="k">Coherence gate</div><div class="v">0.50</div></div>
+  </div>
+
+  <section class="chart">
+    <div class="chart-head">
+      <h2>Magnitude</h2><span class="u">dB &middot; 20 Hz &ndash; 20 kHz</span>
+      <span class="lg">
+        <span><i style="border-color:#9FB0BC"></i>10 captures</span>
+        <span><i style="border-color:#0B5C8A;opacity:.22;border-top-width:6px"></i>&plusmn;1&sigma;</span>
+        <span><i style="border-color:#0B5C8A;border-top-width:2.6px"></i>average</span>
+      </span>
+    </div>
+    <div class="chart-body">
+      <svg id="mag" viewBox="0 0 960 408" role="img"
+        aria-label="Magnitude response in decibels against frequency on a log axis from 20 hertz to 20 kilohertz. Ten individual capture traces are drawn thin and grey, a shaded band shows plus or minus one standard deviation across them, and the energy-averaged curve is drawn bold. The captures agree closely below 500 hertz and spread progressively above 2 kilohertz."></svg>
+    </div>
+  </section>
+
+  <div class="pair">
+    <section class="chart">
+      <div class="chart-head"><h2>Phase</h2><span class="u">degrees, wrapped</span></div>
+      <div class="chart-body">
+        <svg id="pha" viewBox="0 0 470 286" role="img"
+          aria-label="Wrapped phase in degrees against log frequency. The ten captures and their circular-mean average are shown; phase is flat through the midband after delay compensation and departs at the band edges."></svg>
+      </div>
+    </section>
+    <section class="chart">
+      <div class="chart-head"><h2>Coherence</h2><span class="u">&gamma;&sup2; &middot; 0 &ndash; 1</span></div>
+      <div class="chart-body">
+        <svg id="coh" viewBox="0 0 470 286" role="img"
+          aria-label="Coherence gamma squared against log frequency, with the 0.5 gate marked. The ten captures and their arithmetic-mean average stay above the gate from about 60 hertz to 15 kilohertz."></svg>
+      </div>
+    </section>
+  </div>
+
+  <section class="method">
+    <div class="method-head">
+      <h2>How the ten become one</h2>
+      <span class="u">src/data/curve-math.ts &rarr; computeGroupAverage()</span>
+    </div>
+    <div class="m-grid">
+      <div class="m">
+        <div class="q">Magnitude</div>
+        <div class="f">10&middot;log₁₀( mean( 10^(dBᵢ/10) ) )</div>
+        <div class="d">Energy average, not a dB average. Power is what sums physically, so a deep
+          notch in one capture cannot drag the mean down with it.</div>
+      </div>
+      <div class="m">
+        <div class="q">Phase</div>
+        <div class="f">atan2( &Sigma;sin&phi;ᵢ , &Sigma;cos&phi;ᵢ )</div>
+        <div class="d">Circular mean. Averaging wrapped angles arithmetically would put the mean of
+          +179&deg; and &minus;179&deg; at zero; this puts it at 180&deg;.</div>
+      </div>
+      <div class="m">
+        <div class="q">Coherence</div>
+        <div class="f">mean( &gamma;&sup2;ᵢ )</div>
+        <div class="d">Plain arithmetic mean. It stays a quality figure for the set &mdash; where the ten
+          disagree, it falls, and those bins are the ones to distrust.</div>
+      </div>
+      <div class="m">
+        <div class="q">Impulse response</div>
+        <div class="f">mean( hᵢ[n] )</div>
+        <div class="d">Sample-by-sample mean, which only holds because every capture was already
+          delay-compensated to the same 10 ms margin.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="members" id="members"><span class="lbl">Group members</span></div>
+
+  <div class="foot">
+    <span>Curves interpolated to the first member's frequency grid &middot; auto-delay on, IR peak parked at
+      10 ms &middot; smoothing off (raw bins) &middot; magnitude window &minus;30 &hellip; +15 dB</span>
+    <span class="warn">Traces are representative example data, not a real capture set &mdash;
+      export the group as CSV to plot the real thing.</span>
+  </div>
+
+</div></div>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  function el(n, a, t) {
+    var e = document.createElementNS(NS, n);
+    for (var k in a) if (a[k] !== null && a[k] !== undefined) e.setAttribute(k, a[k]);
+    if (t !== undefined) e.textContent = t;
+    return e;
+  }
+  function cv(x) { return getComputedStyle(document.documentElement).getPropertyValue(x).trim(); }
+  var INK = cv("--ink"), INK2 = cv("--ink-2"), INK3 = cv("--ink-3");
+  var RULE = cv("--rule"), RULE2 = cv("--rule-2"), PAPER = cv("--paper");
+  var AVG = cv("--avg"), COH = cv("--coh"), GATE = cv("--gate");
+  var MEMBER = "#9FB0BC";
+  var MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+
+  /* ---------------- synthetic-but-plausible capture set ---------------- */
+  var N = 10, NPTS = 460, F0 = 20, F1 = 20000;
+  var FREQ = [];
+  for (var i = 0; i < NPTS; i++) FREQ.push(F0 * Math.pow(F1 / F0, i / (NPTS - 1)));
+
+  function rnd(k, salt) {            // deterministic per (curve, salt)
+    var x = Math.sin((k + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  }
+  function gauss(x, mu, sig) { var t = Math.log(x / mu) / sig; return Math.exp(-t * t / 2); }
+
+  function baseMag(f) {
+    var r = f / 45, hp = 20 * Math.log10(Math.pow(r, 4) / Math.sqrt(1 + Math.pow(r, 8)));
+    var s = f / 16500, lp = -10 * Math.log10(1 + Math.pow(s, 4));
+    return hp + lp - 1.15 * Math.log10(f / 1000) - 2.7 * gauss(f, 2400, .22) + 1.7 * gauss(f, 6200, .34);
+  }
+  var MODES = [[47, 9, 4.2], [63, 11, -5.0], [88, 8, 3.1], [126, 10, -3.4], [178, 9, 2.4]];
+
+  function memberMag(f, k) {
+    var m = baseMag(f);
+    for (var j = 0; j < MODES.length; j++) {
+      var md = MODES[j], gainScale = 0.42 + 1.15 * rnd(k, j);
+      var fc = md[0] * (1 + 0.055 * (rnd(k, j + 7) - 0.5));
+      var q = (f / fc - fc / f) * md[1];
+      m += md[2] * gainScale / (1 + q * q);
+    }
+    // position-dependent comb, growing with frequency
+    var amp = 0.30 + 3.2 / (1 + Math.exp(-(Math.log10(f) - 2.95) / 0.42));
+    var per = 1.7 + 2.1 * rnd(k, 21), ph = 6.2832 * rnd(k, 33);
+    m += amp * 0.52 * Math.sin(per * 2.4 * Math.log(f) + ph);
+    m += amp * 0.26 * Math.sin(per * 4.7 * Math.log(f) + ph * 1.7);
+    m += (rnd(k, 41) - 0.5) * 0.7;
+    return m;
+  }
+  function memberPhaseDeg(f, k) {
+    var tau = 0.000046 + (rnd(k, 55) - 0.5) * 0.000012;
+    var p = -360 * f * tau;
+    p += 4 * Math.atan(45 / f) * 180 / Math.PI;
+    p -= 2 * Math.atan(f / 16500) * 180 / Math.PI;
+    p += 26 * gauss(f, 2400, .30) * (0.8 + 0.4 * rnd(k, 61));
+    return p;
+  }
+  function memberCoh(f, k) {
+    var c = 0.985 * (f * f / (f * f + 40 * 40)) * (1 / (1 + Math.pow(f / 17500, 6)));
+    c -= 0.055 * rnd(k, 63) + 0.11 * gauss(f, 72, .48) + 0.07 * gauss(f, 13000, .40);
+    return Math.max(0.02, Math.min(1, c));
+  }
+  function wrap(d) { while (d > 180) d -= 360; while (d < -180) d += 360; return d; }
+
+  var MAG = [], PHA = [], COHS = [];
+  for (var k = 0; k < N; k++) {
+    var mm = [], pp = [], cc = [];
+    for (var q = 0; q < NPTS; q++) {
+      mm.push(memberMag(FREQ[q], k));
+      pp.push(memberPhaseDeg(FREQ[q], k));
+      cc.push(memberCoh(FREQ[q], k));
+    }
+    MAG.push(mm); PHA.push(pp); COHS.push(cc);
+  }
+
+  // --- the average, exactly as computeGroupAverage() forms it ---
+  var AMAG = [], APHA = [], ACOH = [], SIG = [];
+  for (var q2 = 0; q2 < NPTS; q2++) {
+    var pw = 0, sn = 0, cs = 0, ch = 0;
+    for (var k2 = 0; k2 < N; k2++) {
+      pw += Math.pow(10, MAG[k2][q2] / 10);
+      var r = PHA[k2][q2] * Math.PI / 180;
+      sn += Math.sin(r); cs += Math.cos(r);
+      ch += COHS[k2][q2];
+    }
+    var am = 10 * Math.log10(pw / N);
+    AMAG.push(am);
+    APHA.push(Math.atan2(sn / N, cs / N) * 180 / Math.PI);
+    ACOH.push(ch / N);
+    var v = 0;
+    for (var k3 = 0; k3 < N; k3++) v += Math.pow(MAG[k3][q2] - am, 2);
+    SIG.push(Math.sqrt(v / N));
+  }
+
+  /* ---------------- generic log-x chart ---------------- */
+  function chart(id, o) {
+    var s = document.getElementById(id), W = o.W, H = o.H;
+    var L = o.L, R = W - o.padR, T = 12, B = H - 26;
+    var l0 = Math.log10(F0), sp = Math.log10(F1) - l0;
+    function X(f) { return L + (Math.log10(f) - l0) / sp * (R - L); }
+    function Y(v) { return B - (v - o.yMin) / (o.yMax - o.yMin) * (B - T); }
+
+    // grid
+    var FT = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+    var FL = ["20", "50", "100", "200", "500", "1k", "2k", "5k", "10k", "20k"];
+    FT.forEach(function (f, i) {
+      s.appendChild(el("line", { x1: X(f), y1: T, x2: X(f), y2: B, stroke: RULE, "stroke-width": 1 }));
+      if (!o.sparseX || i % 2 === 0 || f === 20000)
+        s.appendChild(el("text", { x: X(f), y: B + 13, fill: INK3, "font-family": MONO,
+          "font-size": o.fs, "text-anchor": f === 20 ? "start" : (f === 20000 ? "end" : "middle") }, FL[i]));
+    });
+    o.yTicks.forEach(function (v) {
+      s.appendChild(el("line", { x1: L, y1: Y(v), x2: R, y2: Y(v),
+        stroke: v === 0 && o.zeroRule ? RULE2 : RULE, "stroke-width": 1 }));
+      s.appendChild(el("text", { x: L - 6, y: Y(v) + o.fs * 0.36, fill: INK3, "font-family": MONO,
+        "font-size": o.fs, "text-anchor": "end" }, o.fmt ? o.fmt(v) : String(v)));
+    });
+
+    function path(arr, from) {
+      var d = "", started = false;
+      for (var i = 0; i < NPTS; i++) {
+        var y = arr[i];
+        if (o.wrapBreak && i > 0 && Math.abs(arr[i] - arr[i - 1]) > 170) { started = false; }
+        d += (started ? "L" : "M") + X(FREQ[i]).toFixed(1) + " " + Y(y).toFixed(1) + " ";
+        started = true;
+      }
+      return d;
+    }
+    return { svg: s, X: X, Y: Y, L: L, R: R, T: T, B: B, path: path };
+  }
+
+  /* ---------------- magnitude ---------------- */
+  (function () {
+    var c = chart("mag", { W: 960, H: 408, L: 46, padR: 12, yMin: -30, yMax: 15,
+      yTicks: [15, 10, 5, 0, -5, -10, -15, -20, -25, -30], fs: 10, zeroRule: true });
+    // +/-1 sigma band
+    var up = "", dn = "";
+    for (var i = 0; i < NPTS; i++) {
+      up += (i ? "L" : "M") + c.X(FREQ[i]).toFixed(1) + " " + c.Y(AMAG[i] + SIG[i]).toFixed(1) + " ";
+    }
+    for (var j = NPTS - 1; j >= 0; j--) {
+      dn += "L" + c.X(FREQ[j]).toFixed(1) + " " + c.Y(AMAG[j] - SIG[j]).toFixed(1) + " ";
+    }
+    c.svg.appendChild(el("path", { d: up + dn + "Z", fill: AVG, "fill-opacity": .16, stroke: "none" }));
+    for (var k = 0; k < N; k++)
+      c.svg.appendChild(el("path", { d: c.path(MAG[k]), fill: "none", stroke: MEMBER,
+        "stroke-width": .9, "stroke-opacity": .85 }));
+    c.svg.appendChild(el("path", { d: c.path(AMAG), fill: "none", stroke: AVG,
+      "stroke-width": 2.6, "stroke-linejoin": "round" }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.B, x2: c.R, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.T, x2: c.L, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+    // spread callout
+    var fi = 0; for (var t = 0; t < NPTS; t++) if (FREQ[t] <= 10000) fi = t;
+    var lx = c.X(10000), ly = c.Y(AMAG[fi] + SIG[fi]);
+    c.svg.appendChild(el("line", { x1: lx, y1: ly, x2: lx - 60, y2: ly - 34, stroke: INK3, "stroke-width": 1 }));
+    var tx = el("text", { x: lx - 64, y: ly - 37, fill: INK2, "font-family": MONO, "font-size": 10,
+      "text-anchor": "end" }, "±1σ = " + SIG[fi].toFixed(1) + " dB at 10 kHz");
+    tx.setAttribute("paint-order", "stroke"); tx.setAttribute("stroke", PAPER); tx.setAttribute("stroke-width", 3.5);
+    c.svg.appendChild(tx);
+  })();
+
+  /* ---------------- phase ---------------- */
+  (function () {
+    var c = chart("pha", { W: 470, H: 286, L: 34, padR: 8, yMin: -180, yMax: 180,
+      yTicks: [180, 90, 0, -90, -180], fs: 9, sparseX: true, zeroRule: true, wrapBreak: true,
+      fmt: function (v) { return v + "°"; } });
+    for (var k = 0; k < N; k++)
+      c.svg.appendChild(el("path", { d: c.path(PHA[k].map(wrap)), fill: "none", stroke: MEMBER,
+        "stroke-width": .8, "stroke-opacity": .8 }));
+    c.svg.appendChild(el("path", { d: c.path(APHA.map(wrap)), fill: "none", stroke: AVG,
+      "stroke-width": 2.2, "stroke-linejoin": "round" }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.B, x2: c.R, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.T, x2: c.L, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+  })();
+
+  /* ---------------- coherence ---------------- */
+  (function () {
+    var c = chart("coh", { W: 470, H: 286, L: 34, padR: 8, yMin: 0, yMax: 1,
+      yTicks: [1, .75, .5, .25, 0], fs: 9, sparseX: true,
+      fmt: function (v) { return v.toFixed(2); } });
+    // gate
+    c.svg.appendChild(el("rect", { x: c.L, y: c.Y(0.5), width: c.R - c.L, height: c.B - c.Y(0.5),
+      fill: GATE, "fill-opacity": .07 }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.Y(0.5), x2: c.R, y2: c.Y(0.5), stroke: GATE,
+      "stroke-width": 1.4, "stroke-dasharray": "4 3" }));
+    var g = el("text", { x: c.L + 6, y: c.Y(0.5) + 12, fill: GATE, "font-family": MONO,
+      "font-size": 9 }, "gate 0.50 — bins below excluded");
+    g.setAttribute("paint-order", "stroke"); g.setAttribute("stroke", PAPER); g.setAttribute("stroke-width", 3);
+    c.svg.appendChild(g);
+    for (var k = 0; k < N; k++)
+      c.svg.appendChild(el("path", { d: c.path(COHS[k]), fill: "none", stroke: MEMBER,
+        "stroke-width": .8, "stroke-opacity": .8 }));
+    c.svg.appendChild(el("path", { d: c.path(ACOH), fill: "none", stroke: COH, "stroke-width": 2.2 }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.B, x2: c.R, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+    c.svg.appendChild(el("line", { x1: c.L, y1: c.T, x2: c.L, y2: c.B, stroke: INK, "stroke-width": 1.2 }));
+  })();
+
+  /* ---------------- member chips ---------------- */
+  var host = document.getElementById("members");
+  for (var m = 0; m < N; m++) {
+    var d = document.createElement("span");
+    d.className = "chip";
+    d.innerHTML = '<i></i>M' + String(m + 1).padStart(2, "0");
+    host.appendChild(d);
+  }
+  var avgChip = document.createElement("span");
+  avgChip.className = "chip";
+  avgChip.style.borderColor = AVG; avgChip.style.color = AVG;
+  avgChip.innerHTML = '<i style="background:' + AVG + ';height:3px"></i>AVERAGE (10)';
+  host.appendChild(avgChip);
+
+  /* ---------------- fit on screen ---------------- */
+  var page = document.querySelector(".page"), stage = document.querySelector(".stage");
+  function fit() {
+    page.style.transform = "none"; stage.style.height = "";
+    var avail = stage.clientWidth - 28, w = page.offsetWidth;
+    if (w > avail) {
+      var s = avail / w;
+      page.style.transform = "scale(" + s + ")";
+      stage.style.height = (page.offsetHeight * s + 44) + "px";
+    }
+  }
+  fit(); addEventListener("resize", fit);
+  addEventListener("beforeprint", function () { page.style.transform = "none"; });
+  addEventListener("afterprint", fit);
+})();
+</script>
