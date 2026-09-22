@@ -13,6 +13,8 @@
 
 Sendspin fits well as the **control, discovery, pairing, clock-sync and "into Music Assistant" layer**. It does not fit as the transport for sub-5 ms monitoring. The recommended architecture below uses both.
 
+**Update (confirmed requirements: 8 × stereo I2S → DAW, 48 kHz/24-bit, hard < 5 ms):** see **section 5**. Sendspin leaves the audio path. The design is ESP32-C5 transmitters on **4–8 separate 5 GHz channels** (one channel can't carry 8 low-latency streams), dedicated receiver radios, and an **ESP32-P4 USB-HS hub** presenting 16 inputs to the DAW. Estimated total ≈ 3.9–5.0 ms, subject to a transmit-timing go/no-go test.
+
 ---
 
 ## 1. What Sendspin is (and isn't)
@@ -110,7 +112,9 @@ Android (AAudio low-latency path) is roughly 10–20 ms round trip on good devic
 
 ---
 
-## 4. Recommendation
+## 4. Recommendation (general)
+
+> For the confirmed requirements (8 × stereo I2S → DAW, hard < 5 ms), see **section 5**. The ESP32-S3 dongle below cannot carry 16 × 24-bit channels over Full-Speed USB, and one radio channel cannot carry 8 low-latency transmitters.
 
 1. **Hardware:** transmitters on **ESP32-C5** (5 GHz Wi-Fi 6) or **ESP32-S3**, with a low-group-delay I2S ADC. Receiver dongle on **ESP32-S3** (USB UAC2) or, for more channels and processing, an ESP32-P4 (USB HS) paired with a C5/C6 radio.
 2. **Low-latency path:** architecture **C** (ESP-NOW / raw 802.11 → USB multichannel dongle). PCM, 1 ms packets, 1-block redundancy, 2 ms jitter buffer, per-channel ASRC, TSF or Sendspin-timestamp alignment. Target: **4–7 ms**, with **< 5 ms** at 96 kHz / 0.5 ms packets on a clean channel.
@@ -122,10 +126,99 @@ Android (AAudio low-latency path) is roughly 10–20 ms round trip on good devic
    4. USB UAC2 N-channel on the S3 receiver.
    5. Sendspin source integration in parallel.
 
-## Open questions for you
-- **What is being transmitted?** Mics or instruments to a DAW (needs < 5 ms) or line-level music (20 ms is fine)? This decides C vs. B.
-- **How many transmitters,** at what sample rate and bit depth? (8 × 48 k/24-bit mono ≈ 9.2 Mbit/s of payload, which is fine on 5 GHz.)
-- **Is the < 5 ms target hard?** If yes, plan to evaluate option D next to C.
+## 5. Concrete design: 8 × stereo I2S → DAW, 48 kHz / 24-bit, < 5 ms (hard)
+
+Requirements: **8 transmitters, each one stereo I2S stream, 48 kHz / 24-bit, into a DAW, hard < 5 ms.** This supersedes the general recommendation in section 4. Sendspin drops out of the audio path completely.
+
+### 5.1 Bandwidth and airtime: one channel is not enough
+- Payload: 2 ch × 24 bit × 48 kHz = **2.3 Mbit/s per transmitter, 18.4 Mbit/s total**.
+- Wi-Fi's cost is dominated by **fixed per-packet overhead**: DIFS, backoff, preamble and ACK come to ~150–200 µs per frame, whatever the payload. Low latency means small, frequent packets, which is exactly the expensive case.
+
+Airtime calculated for 5 GHz, HT20 MCS7 (65 Mbit/s), ESP-NOW frame overhead, average CSMA backoff:
+
+| Packet period | Redundancy | ACK | Air/pkt | 1 TX | **8 TX on one channel** | 2 TX per channel |
+|---|---|---|---|---|---|---|
+| 0.5 ms | none | no | 166 µs | 33 % | **265 %** | 66 % |
+| 1 ms | none | no | 182 µs | 18 % | **145 %** | 36 % |
+| 1 ms | 1 block | no | 218 µs | 22 % | **174 %** | 44 % |
+| 1 ms | 1 block | yes | 262 µs | 26 % | **209 %** | 52 % |
+| 2 ms | none | no | 218 µs | 11 % | 87 % | 22 % |
+
+HT40 only saves ~10–20 % because the overhead is fixed, not payload-bound.
+
+**Conclusion:** at the packet sizes a < 5 ms budget allows (≤ 1 ms), **8 transmitters cannot share one channel.** CSMA also degrades sharply above ~50 % load, through collisions and tail latency. Spread the transmitters across radio channels:
+- **Baseline: 4 channels × 2 transmitters** (~44 % load each, with redundancy), **TDMA-scheduled** so the two transmitters on a channel never contend.
+- **Maximum robustness: 8 channels × 1 transmitter** (~22 % load each).
+
+The 5 GHz band has enough 20 MHz channels. Use non-DFS channels (36–48, 149–165) so radar events can't force a channel change mid-show. Check local rules: in the EU, 149–165 are SRD channels limited to 25 mW, which is fine at stage distances.
+
+### 5.2 Architecture
+
+```
+ I2S source ─► ESP32-C5 TX #1 ─┐  ch 36 (TDMA: TX1, TX2)
+ I2S source ─► ESP32-C5 TX #2 ─┤                          ┌─ ESP32-C5 radio A ─┐
+ ...                           ├── 4 × 5 GHz channels ──► ├─ ESP32-C5 radio B ─┤ SPI  ┌───────────────┐  USB 2.0 HS   ┌─────┐
+ I2S source ─► ESP32-C5 TX #8 ─┘                          ├─ ESP32-C5 radio C ─┼────► │  ESP32-P4 hub │ ────────────► │ DAW │
+                                                          └─ ESP32-C5 radio D ─┘      │ jitter buf,   │  UAC2, 16 in  └─────┘
+                                                                                      │ ASRC, PLC     │
+                                                                                      └───────────────┘
+```
+
+**Transmitters: ESP32-C5**
+- 5 GHz capable (dual-band Wi-Fi 6), with one I2S port.
+- **I2S slave** to the source, so the ESP32 follows the source's clock. The source's clock domain is then handled by ASRC in the hub.
+- PCM only. **1 ms blocks** (48 frames × 6 bytes = 288 B). Each packet also carries the previous block (576 B payload) and a sequence number and timestamp header.
+- ESP-NOW (or `esp_wifi_80211_tx` raw frames) at a **fixed PHY rate of HT20 MCS7**, broadcast or unicast with ACK/retries off. Loss is handled by redundancy, not retransmission.
+- Wi-Fi power save off. Send in its **TDMA slot**, timed from the hub radio's sync beacon, and aligned so the slot follows the I2S DMA block completion.
+
+**Receiver radios: 4 (or 8) × ESP32-C5**
+- Each radio is on a fixed channel and sends a short sync beacon every ~10 ms (slot timing and timebase).
+- Each forwards received packets to the hub over **SPI**, adding a hardware-timestamped arrival time.
+
+**Hub: ESP32-P4**
+- It needs **USB 2.0 High-Speed**: 16 channels × 32-bit slots × 48 kHz = 24.6 Mbit/s, which Full-Speed USB (12 Mbit/s, as on the ESP32-S3) cannot carry.
+- **Jitter buffer:** 1.25–1.5 ms per stream. That is 1 packet plus margin, so a lost packet is recovered from the next packet's redundant copy.
+- **ASRC per stereo stream:** 8 transmitters on 8 independent source clocks → the hub's USB/audio clock. Polyphase, ~0.2–0.3 ms group delay. About 25 M MAC/s for 16 channels, which is comfortable on the P4.
+- **Packet-loss concealment** for double losses: repeat and crossfade, with a counter exposed for diagnostics.
+- **Sample alignment across transmitters:** all transmitters stamp block times in the hub's beacon timebase, and ASRC places each block at its capture time. Inter-transmitter phase error is then ~1 sample, and each stereo pair is sample-exact because it comes from one I2S port.
+- **USB Audio Class 2, 16 inputs** (TinyUSB UAC2 on the P4 HS controller).
+  - macOS, Linux and iPadOS: class-compliant low latency out of the box.
+  - **Windows:** the in-box UAC2 driver is not ASIO. A DAW needs an ASIO path, such as a custom/licensed UAC2 ASIO driver, or FlexASIO/ASIO4ALL over WASAPI (higher latency). Budget time for this if the DAW runs on Windows.
+
+### 5.3 Latency budget (I2S in at transmitter → sample in DAW)
+
+| Stage | Budget |
+|---|---|
+| I2S DMA block fill (48 frames) | 1.00 ms |
+| Wait for TDMA slot (aligned to block end) | 0.05–0.15 ms |
+| Air time (576 B at MCS7 + preamble) | 0.10 ms |
+| Radio RX → SPI → hub | 0.15–0.25 ms |
+| Jitter buffer (covers redundancy recovery) | 1.25 ms |
+| ASRC group delay | 0.25 ms |
+| **Wireless link subtotal (to hub USB buffer)** | **≈ 2.9–3.1 ms** |
+| USB HS transfer and device buffer | 0.25–0.5 ms |
+| Host driver + DAW input buffer (32–64 samples at 48 kHz) | 0.7–1.3 ms (+ driver safety offset) |
+| **Total into the DAW** | **≈ 3.9–5.0 ms** |
+
+A **< 5 ms total is achievable, but only just.** It needs a 32-sample DAW buffer, a lean driver (macOS/Linux, or a good ASIO driver on Windows), and **one condition this design does not control: the ESP32 Wi-Fi driver's transmit timing jitter.** Community measurements of `esp_now_send` show 0.6 ms up to 20 ms+ with default settings. If the transmit path cannot hold its slot to within ~0.3 ms at the 99.99th percentile, the 1.25 ms jitter buffer is too small and the < 5 ms target fails.
+
+Where the remaining margin could come from, if needed:
+- 0.5 ms blocks with **8 channels × 1 transmitter** (33 % load). This saves ~1 ms but doubles the packet rate per radio.
+- 96 kHz (smaller blocks per ms). This doubles bandwidth, so the fit must be recalculated.
+
+### 5.4 Prototype plan (go/no-go first)
+1. **Go/no-go: transmit determinism.** One C5 transmitter → one C5 receiver on a clean 5 GHz channel, 1 ms / 576 B frames at fixed MCS7. GPIO-toggle at I2S DMA done, and again at RX callback. Scope-measure the latency histogram over hours, including the 99.99th percentile. **Pass: 99.99th percentile < ~0.5 ms.** Then repeat with 2 transmitters in TDMA on one channel, and with a busy neighbouring Wi-Fi network.
+2. If step 1 fails: test raw `esp_wifi_80211_tx`, and different ESP-IDF queue/task priorities. If it still fails, the ESP32 radio is the wrong part (see 5.5).
+3. P4 hub: SPI link to 4 radios, jitter buffer, ASRC, PLC, UAC2 16 inputs (TinyUSB). Measure loopback latency with a DAW round-trip test.
+4. Scale to 8 transmitters, 4 channels. Soak test at a real venue. Log the loss counters.
+5. Windows ASIO strategy, if the DAW is on Windows.
+
+### 5.5 Plan B if the ESP32 radio can't hold timing
+- **Nordic 2.4 GHz proprietary radios can't carry this uncompressed.** The 2 Mbit/s PHY is below the 2.3 Mbit/s stereo 24-bit payload, and low-delay compression costs latency or quality. It would need newer higher-rate PHY modes, 16-bit audio, or two radios per transmitter.
+- **An FPGA/SDR or a dedicated 5 GHz audio module with a true TDMA MAC** is the professional route. Digital wireless mic and IEM systems reach ~2–3 ms this way. It is much more effort. Keep ESP32 for control/UI only.
+
+### 5.6 Where Sendspin fits now
+Not in the audio path. It could optionally be used on the hub for discovery and control from Music Assistant, or to tap a monitor mix into the house system via `source@v1`. Neither is needed for the DAW use case.
 
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
