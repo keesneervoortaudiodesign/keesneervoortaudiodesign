@@ -355,6 +355,36 @@ Payload doubles to **4.6 Mbit/s per stereo transmitter (36.9 Mbit/s total)**. Th
   - **Low-delay lossless coding** per 1 ms block (fixed predictor + Rice coding, FLAC-style): ~1.5–2× reduction, no added delay, small CPU cost. At 96 kHz it compresses better, because the ultrasonic band is nearly empty.
   - **LC3plus High Resolution** (up to 96 kHz / 24-bit, 2.5 ms frames, licensed from Fraunhofer): a low-delay codec designed for this. Verify its delay and CPU cost on ESP32.
 
+## 10. Lossless compression at 96 kHz / 24-bit: how much does it save?
+
+A lossless coder can only remove *predictable* information. The minimum size is roughly
+
+> bits/sample ≈ log2(prediction-residual RMS in LSB) + 2.05
+
+So compression comes from two things only:
+- **Level headroom:** every 6 dB of average level below full scale saves 1 bit.
+- **Spectral tilt:** a non-flat spectrum is predictable.
+
+**Full-band content up to 48 kHz removes the second almost entirely.** On top of that, the lowest 4–6 bits of a 24-bit ADC are analogue noise, which is incompressible.
+
+Simulation: `scripts/lossless_96k_sim.py`. 96 kHz / 24-bit, stereo, 1 ms blocks, FLAC-style fixed predictors + Rice coding + mid/side per block, compared against the Gaussian entropy bound from the PSD.
+
+| Signal | Practical coder (1 ms blocks) | Theoretical maximum |
+|---|---|---|
+| White noise flat to 48 kHz, −18 dBFS RMS | **1.08×** | 1.09× |
+| Pink noise to 48 kHz, −18 dBFS | 1.13× | 1.15× |
+| Pink noise to 48 kHz, −30 dBFS (quieter) | 1.24× | 1.27× |
+| Pink + strong ultrasonic (−40 dBFS flat 20–48 kHz) | 1.12× | 1.14× |
+| Music-like: content to 20 kHz only, ADC noise floor above | 1.23× | 1.57× (per channel) |
+
+**Conclusions**
+- With genuine content up to 48 kHz, lossless saves only **~5–15 %**, and slightly more for quiet signals. It is essentially incompressible.
+- Typical real 96 k recordings (little above 20–30 kHz) compress ~1.3–1.6× with low-delay coders, and more with long-block encoders like FLAC.
+- **Radio links must be sized for the worst case**, which is ~uncompressed. Lossless coding can only provide *statistical* headroom, for retransmissions or redundancy when content allows. It does not reduce the number of channels or radios needed.
+- To guarantee a lower rate, the only options are fewer bits or lossy coding:
+  - **20-bit:** −17 %, still ~120 dB dynamic range, above most ADCs' real performance.
+  - A low-delay lossy codec such as LC3plus HR.
+
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
 - ESPHome Sendspin component: https://esphome.io/components/sendspin/
