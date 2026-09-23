@@ -317,6 +317,44 @@ Payload doubles to **4.6 Mbit/s per stereo transmitter (36.9 Mbit/s total)**. Th
 - **nRF54L drops out:** 4.6 Mbit/s exceeds the ~3.3 Mbit/s usable at 4 Mbit/s PHY. Even 20-bit (3.84 Mbit/s) doesn't fit. It would need two radios per transmitter or variable-rate lossless coding.
 - **Suggestion:** make the sample rate a system setting. At 48 kHz the system uses half the spectrum and radios, which gives more robustness in crowded venues.
 
+## 9. Variant: Opus compression on the transmitter
+
+### 9.1 Opus constraints that matter here
+- **Maximum sample rate is 48 kHz.** A 96 kHz source would first have to be downsampled, so it is **incompatible with the 96 kHz requirement**.
+- **Lossy.** Even at 256–510 kbit/s stereo (near-transparent), it does not preserve 24-bit resolution. That is generally undesirable as a DAW recording source, because artefacts can surface under heavy processing.
+- **Algorithmic delay = frame + 2.5 ms look-ahead** (CELT / `RESTRICTED_LOWDELAY` mode). Smallest frame 2.5 ms → **5 ms** before any encode time, radio or buffering. 5 ms frame → 7.5 ms, 10 ms → 12.5 ms.
+
+### 9.2 Encode time on ESP32 (published data points, not measured on C5)
+
+| Implementation / chip | Configuration | CPU |
+|---|---|---|
+| esp-libopus (plain port), ESP32 classic 240 MHz, 1 core | 48 kHz, **complexity 1** | **~85 %** (higher complexity not real time) |
+| same | 24 kHz, complexity > 4 | not real time |
+| sendspin-a1s-source, ESP32 classic | 24 kHz stereo, 128 kbit/s, 40 ms frames | ~15 ms per 40 ms (~37 %) |
+| esp_audio_codec (Espressif), ESP32-S3 | decode 48 kHz stereo | ~6 % |
+
+**Estimate for "high quality" (48 kHz stereo, 256–510 kbit/s, complexity ≥ 5):**
+- **Not real time on a single-core C5.** Wi-Fi also needs that core, and the C5 lacks the Xtensa DSP optimisations some Opus ports use.
+- Plausible on an **ESP32-S3** (dual core, SIMD-optimised Opus in esp_audio_codec), or on a P4 with a C5 radio.
+- Encode time per frame ≈ frame length × CPU load. For example, a 5 ms frame at 70 % load takes ~3.5 ms to encode.
+- **Benchmark before committing:** the exact chip, complexity and frame size.
+
+### 9.3 Effect on latency and airtime (8 transmitters)
+
+| Frames per packet | 8 TX on 1 channel (510 kbit/s, ACK) | Latency to DAW (estimate) |
+|---|---|---|
+| 2.5 ms | 67 % (still too high) | ≈ 9.5–11 ms |
+| 5 ms | **37 %: one channel, one receiver radio** | ≈ 15–18 ms |
+| 10 ms | 22 % | ≈ 25–30 ms |
+
+- **Hard < 5 ms: impossible with Opus.** The algorithmic delay alone is 5 ms.
+- **20 ms budget: Opus with 5 ms frames lets all 8 transmitters share one channel and one receiver radio**, at the cost of lossy audio and 48 kHz max.
+  - The nRF54L also becomes an option again (8 × 256 kbit/s ≈ 2 Mbit/s on one channel).
+  - The hub then decodes 8 Opus streams. On the P4 that is a moderate load, but check it for 2.5–5 ms frames, because the per-frame overhead grows.
+- **Alternatives to Opus that keep quality:**
+  - **Low-delay lossless coding** per 1 ms block (fixed predictor + Rice coding, FLAC-style): ~1.5–2× reduction, no added delay, small CPU cost. At 96 kHz it compresses better, because the ultrasonic band is nearly empty.
+  - **LC3plus High Resolution** (up to 96 kHz / 24-bit, 2.5 ms frames, licensed from Fraunhofer): a low-delay codec designed for this. Verify its delay and CPU cost on ESP32.
+
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
 - ESPHome Sendspin component: https://esphome.io/components/sendspin/
@@ -326,4 +364,6 @@ Payload doubles to **4.6 Mbit/s per stereo transmitter (36.9 Mbit/s total)**. Th
 - ESP-NOW (IDF, v2 payload): https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html
 - ESP-NOW audio latency: https://esp32.com/viewtopic.php?t=30615 , https://www.pschatzmann.ch/home/2022/04/27/low-latency-streaming-of-audio-data-using-esp-now/
 - nRF54L ESB 4 Mbps: https://www.ezurio.com/documentation/enhanced-shockburst-esb-with-4-mbps-phy-on-the-bl54l15-1 , https://rf-design.co.za/2026/05/07/achieving-3-3-mbps-throughput-with-esb-on-the-bl54l15-beyond-ble-limits/
+- esp-libopus performance notes: https://github.com/XasWorks/esp-libopus
+- esp_audio_codec: https://components.espressif.com/components/espressif/esp_audio_codec
 - Sendspin overview: https://www.xda-developers.com/sendspin-esphome-multi-room-audio/
