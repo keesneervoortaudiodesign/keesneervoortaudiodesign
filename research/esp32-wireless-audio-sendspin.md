@@ -220,6 +220,54 @@ Where the remaining margin could come from, if needed:
 ### 5.6 Where Sendspin fits now
 Not in the audio path. It could optionally be used on the hub for discovery and control from Music Assistant, or to tap a monitor mix into the house system via `source@v1`. Neither is needed for the DAW use case.
 
+## 6. Variant: relaxed budget of < 20 ms
+
+The same 8 × stereo I2S → DAW system, with the total latency target relaxed to **20 ms**.
+
+### 6.1 Airtime with larger packets (8 transmitters, 5 GHz HT20 MCS7)
+
+| Packet period | Payload | ACK | Air/pkt | 8 TX on 1 channel | 4 TX per channel (2 channels) |
+|---|---|---|---|---|---|
+| 2 ms | 576 B | yes | 262 µs | 105 % | 52 % |
+| 3 ms | 864 B | yes | 298 µs | 79 % | 40 % |
+| **4 ms** | **1152 B** | **yes** | **334 µs** | 67 % | **33 %** |
+| 5 ms | 1440 B | yes | 366 µs | 58 % | 29 % |
+
+- 5 ms is the ceiling, because ESP-NOW v2 carries at most 1470 bytes of payload.
+- 8 transmitters on one 20 MHz channel is still too loaded for dependable CSMA, even at 5 ms.
+- HT40 (40 MHz channel) at 5 ms packets would bring one channel down to roughly 37–44 %. That is borderline and needs strong signal.
+- **2 channels × 4 transmitters with 4 ms packets (~33 % load each)** is the comfortable fit.
+
+### 6.2 What changes
+- **Receiver radios: 4 → 2.** Hub = P4 + 2 × C5.
+- **Loss recovery through normal Wi-Fi retries** (unicast + ACK) instead of sending every block twice. The jitter buffer is big enough for several retransmissions, so bandwidth use halves.
+- **Time slots become optional.** Plain CSMA at ~33 % load, with an 8 ms jitter buffer, absorbs contention. Slots are still nice to have.
+- **2.4 GHz becomes usable** (for example channels 1 + 6 or 1 + 11). The buffer rides out Bluetooth and microwave bursts of several ms. 5 GHz remains preferred.
+- **Transmit-timing go/no-go risk mostly disappears.** Driver jitter of a few ms is now absorbed.
+- **Alternative with no hub hardware:** a standard Wi-Fi access point, UDP packets, and a wired PC running a receiver app (architecture B). The cost moves into software: a virtual multichannel audio driver, which is hard on Windows.
+
+### 6.3 Latency budget (4 ms packets, 2 channels)
+
+| Stage | Budget |
+|---|---|
+| I2S block fill | 4.0 ms |
+| Air + contention + retries (absorbed by jitter buffer) | within buffer |
+| Jitter buffer | 8.0 ms |
+| SPI + ASRC | 0.6 ms |
+| USB + DAW buffer (128 samples) + driver | 4–5 ms |
+| **Total** | **≈ 16.5–17.5 ms** |
+
+### 6.4 Alternative: spend the budget on robustness
+Keep the < 5 ms hardware (4 radios, 1 ms packets) and raise only the jitter buffer to about 10 ms. That gives **≈ 14 ms total** with a very large margin against interference. Same hardware, one firmware setting.
+
+### 6.5 Practical note on what 20 ms means for musicians
+- **Recording** with direct or local monitoring: the DAW compensates the fixed offset, so 20 ms is harmless.
+- **Monitoring through the DAW:** performers typically notice anything above ~10 ms. For that workflow, the < 5 ms design (or section 6.4 with a small buffer) remains the right choice.
+- **Make the jitter buffer a user setting** (for example 1.25 / 4 / 10 ms), so the same system covers both workflows.
+
+### 6.6 Sendspin at 20 ms
+The `source@v1` path now fits on paper: 5 ms chunks plus about 10 ms of buffering. It is still TCP, though, so a lost segment stalls the stream for ~200 ms and causes an audible glitch. The server stack is also built for multi-room playback, not DAW input. Fine for non-critical use, but still not recommended as the main audio path.
+
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
 - ESPHome Sendspin component: https://esphome.io/components/sendspin/
