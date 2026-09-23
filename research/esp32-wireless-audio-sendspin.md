@@ -287,6 +287,36 @@ The `source@v1` path now fits on paper: 5 ms chunks plus about 10 ms of bufferin
 - **nRF5340 / nRF52:** the 2 Mbit/s PHY is too small for 24-bit stereo. LE Audio (LC3) is ~20 ms or more. Not suitable.
 - **Plan:** run the ESP32 go/no-go test (section 5.4), and in parallel a 1-transmitter → 1-receiver nRF54L ESB test at 4 Mbit/s with 1 ms packets. Choose the radio on measured worst-case (99.99th percentile) latency and loss.
 
+## 8. Variant: 96 kHz / 24-bit
+
+Payload doubles to **4.6 Mbit/s per stereo transmitter (36.9 Mbit/s total)**. The per-packet overhead stays the same, so airtime rises less than 2×, but it still roughly **doubles the spectrum and receiver radios needed**.
+
+### 8.1 Airtime (5 GHz MCS7, per-channel load)
+
+| Design | Packet | 48 kHz | 96 kHz |
+|---|---|---|---|
+| < 5 ms, 1 ms packets, each block sent twice, no ACK | HT20 | 576 B → 2 TX/ch = 44 % | 1152 B → 2 TX/ch = **58 %** (too high); 1 TX/ch = 29 % |
+| | HT40 | 36 % | 2 TX/ch = **42 %** |
+| 20 ms, largest packets with ACK | HT20 | 4 ms / 1152 B → 4 TX/ch = 33 % | **2.5 ms max** (1470 B ESP-NOW limit) → 3 TX/ch = 44 %, 2 TX/ch = 29 % |
+| | HT40 | — | 4 TX/ch = 44 % |
+
+### 8.2 Consequences
+- **< 5 ms design:**
+  - Either **8 × HT20 channels with 1 transmitter each** (8 receiver radios)
+  - or **4 × HT40 channels with 2 each** (4 radios). This uses all four non-DFS 40 MHz channels (36/40, 44/48, 149/153, 157/161) and loses ~3 dB of sensitivity. Verify that the C5 supports HT40 on 5 GHz.
+- **20 ms design:** packets are capped at ~2.5 ms. **3–4 receiver radios** instead of 2.
+- **Latency slightly better:**
+  - The DAW buffer (64 samples = 0.67 ms instead of 1.33 ms) and the sample-rate-conversion delay halve in time.
+  - The 1 ms packet stays the same because of airtime.
+  - The < 5 ms total drops by ~0.5–0.8 ms, to **≈ 3.4–4.4 ms**.
+- **Hub:**
+  - 16 channels × 96 kHz ≈ 49 Mbit/s of USB audio, which is easy on USB High-Speed (standard for pro interfaces).
+  - Sample-rate conversion needs ~50 M MAC/s, still comfortable on the P4.
+  - SPI ~9.2 Mbit/s per radio.
+- **Transmitter:** C5 I2S slave at BCLK 6.144 MHz, no issue.
+- **nRF54L drops out:** 4.6 Mbit/s exceeds the ~3.3 Mbit/s usable at 4 Mbit/s PHY. Even 20-bit (3.84 Mbit/s) doesn't fit. It would need two radios per transmitter or variable-rate lossless coding.
+- **Suggestion:** make the sample rate a system setting. At 48 kHz the system uses half the spectrum and radios, which gives more robustness in crowded venues.
+
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
 - ESPHome Sendspin component: https://esphome.io/components/sendspin/
