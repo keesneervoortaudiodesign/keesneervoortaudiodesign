@@ -268,6 +268,25 @@ Keep the < 5 ms hardware (4 radios, 1 ms packets) and raise only the jitter buff
 ### 6.6 Sendspin at 20 ms
 The `source@v1` path now fits on paper: 5 ms chunks plus about 10 ms of buffering. It is still TCP, though, so a lost segment stalls the stream for ~200 ms and causes an audible glitch. The server stack is also built for multi-room playback, not DAW input. Fine for non-critical use, but still not recommended as the main audio path.
 
+## 7. Nordic nRF54L as an alternative radio
+
+| | ESP32-C5 (ESP-NOW) | nRF54L15 (Enhanced ShockBurst / own protocol) |
+|---|---|---|
+| PHY rate | 65+ Mbit/s (HT20 MCS7) | 4 Mbit/s proprietary (~3.3 Mbit/s sustained measured) |
+| Streams per radio channel | 2 at 1 ms (< 5 ms design), 4 at 4 ms (20 ms design) | **1** (2.3 Mbit/s of ~3.3 usable) |
+| Band | 2.4 + 5 GHz | 2.4 GHz only (narrow ~2–4 MHz channels, 8 fit in the band) |
+| MAC timing | Closed Wi-Fi driver, CSMA/backoff, **transmit jitter unknown** (the go/no-go risk) | **Fully under your control:** TDMA, turnaround, retransmit timing, and your own frequency hopping |
+| Loss handling headroom | Plenty (can send every block twice) | Tight. Double sending doesn't fit. Needs 20-bit or light compression to make room for one retransmit |
+| Receivers for 8 transmitters | 4 (< 5 ms) or 2 (20 ms) | 8 (frequency division), plus a USB hub (P4 or XMOS) |
+| Power / size | ~100+ mA transmitting | Much lower, easy for battery bodypacks |
+
+**Verdict**
+- **Hard < 5 ms:** the nRF54L is a serious option, possibly better. Deterministic, self-owned radio timing is exactly how commercial 2.4 GHz digital wireless reaches ~3–4 ms. The price is 1 transmitter per channel, 8 receiver radios, 2.4 GHz only, and very little bandwidth headroom.
+  - Send **20-bit** (1.92 Mbit/s, still about 120 dB dynamic range) or use light low-delay lossless coding, to leave room for retransmission.
+- **20 ms budget:** the ESP32-C5 is clearly simpler (2 receivers, 5 GHz, abundant bandwidth).
+- **nRF5340 / nRF52:** the 2 Mbit/s PHY is too small for 24-bit stereo. LE Audio (LC3) is ~20 ms or more. Not suitable.
+- **Plan:** run the ESP32 go/no-go test (section 5.4), and in parallel a 1-transmitter → 1-receiver nRF54L ESB test at 4 Mbit/s with 1 ms packets. Choose the radio on measured worst-case (99.99th percentile) latency and loss.
+
 ### Sources
 - Sendspin spec: https://github.com/Sendspin/spec (`roles/source/v1.md`, `roles/player/v1.md`)
 - ESPHome Sendspin component: https://esphome.io/components/sendspin/
@@ -276,4 +295,5 @@ The `source@v1` path now fits on paper: 5 ms chunks plus about 10 ms of bufferin
 - ESP32-A1S Sendspin source: https://github.com/raine-works/sendspin-a1s-source
 - ESP-NOW (IDF, v2 payload): https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html
 - ESP-NOW audio latency: https://esp32.com/viewtopic.php?t=30615 , https://www.pschatzmann.ch/home/2022/04/27/low-latency-streaming-of-audio-data-using-esp-now/
+- nRF54L ESB 4 Mbps: https://www.ezurio.com/documentation/enhanced-shockburst-esb-with-4-mbps-phy-on-the-bl54l15-1 , https://rf-design.co.za/2026/05/07/achieving-3-3-mbps-throughput-with-esb-on-the-bl54l15-beyond-ble-limits/
 - Sendspin overview: https://www.xda-developers.com/sendspin-esphome-multi-room-audio/
